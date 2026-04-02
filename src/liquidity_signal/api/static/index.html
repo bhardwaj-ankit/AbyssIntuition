@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Liquidity Signal Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <style>
+      :root {
+        --bg: #060b1a;
+        --panel: #0f1730;
+        --muted: #8ca3c7;
+        --text: #ecf3ff;
+        --accent: #2dd4bf;
+        --accent-2: #38bdf8;
+        --danger: #f43f5e;
+        --warn: #fbbf24;
+        --border: #203057;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(1200px 700px at 10% -10%, #12356f55, transparent 60%),
+          radial-gradient(900px 600px at 100% 0%, #0f766e44, transparent 55%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      .container {
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .topbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: 0.2px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .check-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #0e1b3a;
+        color: #c8ddff;
+        font-size: 13px;
+      }
+
+      .check-wrap input {
+        accent-color: #14b8a6;
+      }
+
+      select,
+      button {
+        background: #0e1b3a;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+
+      button {
+        background: linear-gradient(135deg, #0ea5e9, #14b8a6);
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .card {
+        grid-column: span 2;
+        background: linear-gradient(180deg, #111d3a, #0c1530);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+      }
+
+      .card .label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+      }
+
+      .card .value {
+        margin-top: 6px;
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .direction-long { color: #22c55e; }
+      .direction-short { color: #ef4444; }
+      .direction-flat { color: var(--warn); }
+
+      .reasons {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      details {
+        background: linear-gradient(180deg, #101a36, #0b1530);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 16px;
+        overflow: hidden;
+      }
+
+      summary {
+        padding: 12px 14px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      pre {
+        margin: 0;
+        padding: 14px;
+        background: #091025;
+        color: #cce3ff;
+        font-size: 12px;
+        line-height: 1.45;
+        overflow: auto;
+      }
+
+      .panel {
+        background: linear-gradient(180deg, #121d3f, #0a1230);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 10px;
+      }
+
+      .panel h2 {
+        margin: 8px 8px 2px;
+        font-size: 16px;
+      }
+
+      .panel p {
+        margin: 0 8px 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      #liqChart {
+        height: 560px;
+      }
+
+      .legend {
+        display: flex;
+        gap: 16px;
+        margin: 8px;
+        color: #bfd4f6;
+        font-size: 12px;
+      }
+
+      .bot-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 10px 8px;
+      }
+
+      .ab-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 8px;
+      }
+
+      .ab-card {
+        border: 1px solid var(--border);
+        background: #0a1230;
+        border-radius: 10px;
+        padding: 10px;
+      }
+
+      .ab-card h3 {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+
+      .trade-log-wrap {
+        margin: 8px;
+        overflow-x: auto;
+      }
+
+      .trade-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 980px;
+      }
+
+      .trade-table th,
+      .trade-table td {
+        border: 1px solid var(--border);
+        padding: 8px;
+        font-size: 12px;
+        text-align: left;
+      }
+
+      .trade-table th {
+        background: #0e1b3a;
+        color: #c8ddff;
+        position: sticky;
+        top: 0;
+      }
+
+      .pnl-pos { color: #22c55e; }
+      .pnl-neg { color: #ef4444; }
+
+      .bot-tile {
+        border: 1px solid var(--border);
+        background: #0a1230;
+        border-radius: 10px;
+        padding: 10px;
+      }
+
+      .bot-tile .k {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .bot-tile .v {
+        margin-top: 6px;
+        font-size: 19px;
+        font-weight: 700;
+      }
+
+      .legend .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        margin-right: 6px;
+      }
+
+      .dot-candle { background: #38bdf8; }
+      .dot-above { background: #f43f5e; }
+      .dot-below { background: #22c55e; }
+      .dot-cluster { background: #fbbf24; }
+
+      /* Market Behavior Modal */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        color: #e5e7eb;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #374151;
+      }
+
+      .modal-header h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        color: #9ca3af;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-close:hover {
+        color: #e5e7eb;
+      }
+
+      .behavior-section {
+        margin-bottom: 20px;
+      }
+
+      .behavior-section h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 12px 0;
+        color: #f3f4f6;
+      }
+
+      .behavior-details {
+        background: #111827;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        padding: 12px;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .behavior-details p {
+        margin: 0 0 8px 0;
+      }
+
+      .behavior-details p:last-child {
+        margin-bottom: 0;
+      }
+
+      .behavior-stat {
+        display: flex;
+        justify-content: space-between;
+        margin: 8px 0;
+        padding: 6px 0;
+        border-bottom: 1px solid #1f2937;
+      }
+
+      .behavior-stat:last-child {
+        border-bottom: none;
+      }
+
+      .behavior-stat label {
+        color: #9ca3af;
+        font-weight: 500;
+      }
+
+      .behavior-stat value {
+        color: #60a5fa;
+        font-weight: 600;
+      }
+
+      @media (max-width: 900px) {
+        .card { grid-column: span 3; }
+        #liqChart { height: 460px; }
+        .bot-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .ab-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+      }
+
+      @media (max-width: 640px) {
+        .card { grid-column: span 6; }
+        .controls { width: 100%; }
+        select, button { flex: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <h1>Liquidity Signal Dashboard</h1>
+        <div class="controls">
+          <select id="pairSelect">
+            <option>BTCUSDT</option>
+            <option>ETHUSDT</option>
+            <option>SOLUSDT</option>
+            <option>BNBUSDT</option>
+          </select>
+          <label class="check-wrap">
+            <input id="autoRefresh" type="checkbox" />
+            Auto refresh
+          </label>
+          <button id="refreshBtn">Refresh</button>
+        </div>
+      </div>
+
+      <div class="meta" id="refreshMeta">Waiting for first refresh...</div>
+
+      <section class="grid">
+        <article class="card">
+          <div class="label">Direction</div>
+          <div class="value" id="directionValue">-</div>
+          <div class="reasons" id="reasonsValue"></div>
+        </article>
+        <article class="card">
+          <div class="label">Confidence</div>
+          <div class="value" id="confidenceValue">-</div>
+          <div class="reasons" id="methodValue"></div>
+        </article>
+        <article class="card">
+          <div class="label">Current Price</div>
+          <div class="value" id="priceValue">-</div>
+        </article>
+        <article class="card">
+          <div class="label">Take Profit</div>
+          <div class="value" id="tpValue">-</div>
+        </article>
+        <article class="card">
+          <div class="label">Stop Loss</div>
+          <div class="value" id="slValue">-</div>
+        </article>
+        <article class="card">
+          <div class="label">Dominant Pull</div>
+          <div class="value" id="pullValue">-</div>
+          <div class="reasons" id="pullConfidence"></div>
+        </article>
+        <article class="card" style="cursor: pointer; border: 2px solid #fbbf24; transition: all 0.2s;" onclick="showMarketBehaviorModal()">
+          <div class="label">📊 Market Behavior</div>
+          <div style="margin-top: 6px; font-size: 14px; color: #fbbf24;" id="behaviorLabel">Click to Analyze</div>
+          <div class="reasons" style="color: #9ca3af; font-size: 12px;">Trend patterns • Price action</div>
+        </article>
+      </section>
+
+      <details>
+        <summary>Signal Explain Response (Collapse / Expand)</summary>
+        <pre id="explainJson">{}</pre>
+      </details>
+
+      <section class="panel">
+        <h2>Bot Trading Backtest</h2>
+        <p>
+          Paper trading test that follows model signals with default initial capital 1000 USD,
+          including fee and funding-rate impact.
+        </p>
+        <div class="controls" style="padding: 8px;">
+          <label class="check-wrap">
+            <input id="useLiqForBacktest" type="checkbox" checked />
+            Use liquidation filter
+          </label>
+          <label class="check-wrap">
+            <input id="useHtfFilter" type="checkbox" checked />
+            Use HTF filter
+          </label>
+          <label class="check-wrap">
+            <input id="useSentimentData" type="checkbox" checked />
+            Use sentiment filter
+          </label>
+          <select id="htfIntervalSelect">
+            <option value="15m" selected>HTF 15m</option>
+            <option value="1h">HTF 1h</option>
+            <option value="4h">HTF 4h</option>
+          </select>
+          <select id="htfLookbackSelect">
+            <option value="10" selected>Lookback 10</option>
+            <option value="20">Lookback 20</option>
+            <option value="30">Lookback 30</option>
+            <option value="40">Lookback 40</option>
+          </select>
+          <button id="runBacktestBtn">Start Test</button>
+          <button id="stopBacktestBtn" style="background: linear-gradient(135deg, #ef4444, #f97316);" disabled>Stop</button>
+          <button id="resetBacktestBtn" style="background: linear-gradient(135deg, #334155, #475569);">Reset Bot Test</button>
+          <button id="runABBtn" style="background: linear-gradient(135deg, #4f46e5, #0891b2);">Run A/B Comparison</button>
+        </div>
+        <div class="meta" id="backtestMeta" style="padding: 0 8px 4px;">Not run yet.</div>
+        <div class="bot-summary">
+          <div class="bot-tile"><div class="k">Final Capital</div><div class="v" id="btFinal">-</div></div>
+          <div class="bot-tile"><div class="k">Return %</div><div class="v" id="btReturn">-</div></div>
+          <div class="bot-tile"><div class="k">Trades</div><div class="v" id="btTrades">-</div></div>
+          <div class="bot-tile"><div class="k">Win Rate</div><div class="v" id="btWinRate">-</div></div>
+          <div class="bot-tile"><div class="k">Fees Paid</div><div class="v" id="btFees">-</div></div>
+          <div class="bot-tile"><div class="k">Funding PnL</div><div class="v" id="btFunding">-</div></div>
+          <div class="bot-tile"><div class="k">Max Drawdown %</div><div class="v" id="btMdd">-</div></div>
+          <div class="bot-tile"><div class="k">Run Start Capital</div><div class="v" id="btInitial">1000.00</div></div>
+        </div>
+        <div class="meta" style="padding: 0 8px;">Cumulative stats from first run (includes fees in each trade net PnL).</div>
+        <div class="bot-summary">
+          <div class="bot-tile"><div class="k">Total Trades</div><div class="v" id="cumTrades">0</div></div>
+          <div class="bot-tile"><div class="k">Profit Trades</div><div class="v" id="cumProfitTrades">0</div></div>
+          <div class="bot-tile"><div class="k">Loss Trades</div><div class="v" id="cumLossTrades">0</div></div>
+          <div class="bot-tile"><div class="k">Total Profit</div><div class="v" id="cumProfit">0.00</div></div>
+          <div class="bot-tile"><div class="k">Total Loss</div><div class="v" id="cumLoss">0.00</div></div>
+          <div class="bot-tile"><div class="k">Net PnL</div><div class="v" id="cumNet">0.00</div></div>
+        </div>
+
+        <div class="meta" id="abMeta" style="padding: 0 8px 4px;">A/B comparison not run yet.</div>
+        <div class="ab-grid">
+          <div class="ab-card">
+            <h3>Run A: Liquidation ON</h3>
+            <div class="reasons" id="abOnStats">-</div>
+          </div>
+          <div class="ab-card">
+            <h3>Run B: Liquidation OFF</h3>
+            <div class="reasons" id="abOffStats">-</div>
+          </div>
+        </div>
+        <details style="margin: 8px;" open>
+          <summary>Backtest Trade Log (Local Time)</summary>
+          <div class="trade-log-wrap">
+            <table class="trade-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Side</th>
+                  <th>Entry (Local)</th>
+                  <th>Exit (Local)</th>
+                  <th>Duration (min)</th>
+                  <th>Entry Price</th>
+                  <th>Exit Price</th>
+                  <th>PnL</th>
+                  <th>ROI %</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody id="backtestTradeRows">
+                <tr><td colspan="10" style="color:#8ca3c7;">No trades yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section class="panel">
+        <h2>Liquidity Map Graph</h2>
+        <p>
+          Coinglass-style view: liquidation levels are projected from leverage assumptions and rendered as relative-intensity horizontal bands.
+          Color intensity is comparative, not absolute liquidation size.
+        </p>
+        <div class="legend">
+          <span><span class="dot dot-candle"></span>Candles</span>
+          <span><span class="dot dot-above"></span>Levels Above</span>
+          <span><span class="dot dot-below"></span>Levels Below</span>
+          <span><span class="dot dot-cluster"></span>Clusters</span>
+        </div>
+        <div id="liqChart"></div>
+      </section>
+    </div>
+
+    <!-- Market Behavior Modal -->
+    <div id="behaviorModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Market Behavior Analysis</h2>
+          <button class="modal-close" onclick="closeBehaviorModal()">&times;</button>
+        </div>
+        <div id="modalBody">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const pairSelect = document.getElementById("pairSelect");
+      const autoRefresh = document.getElementById("autoRefresh");
+      const refreshBtn = document.getElementById("refreshBtn");
+      const refreshMeta = document.getElementById("refreshMeta");
+
+      const directionValue = document.getElementById("directionValue");
+      const confidenceValue = document.getElementById("confidenceValue");
+      const priceValue = document.getElementById("priceValue");
+      const tpValue = document.getElementById("tpValue");
+      const slValue = document.getElementById("slValue");
+      const reasonsValue = document.getElementById("reasonsValue");
+      const pullValue = document.getElementById("pullValue");
+      const pullConfidence = document.getElementById("pullConfidence");
+      const methodValue = document.getElementById("methodValue");
+      const explainJson = document.getElementById("explainJson");
+      const runBacktestBtn = document.getElementById("runBacktestBtn");
+      const stopBacktestBtn = document.getElementById("stopBacktestBtn");
+      const resetBacktestBtn = document.getElementById("resetBacktestBtn");
+      const runABBtn = document.getElementById("runABBtn");
+      const useLiqForBacktest = document.getElementById("useLiqForBacktest");
+      const useHtfFilter = document.getElementById("useHtfFilter");
+      const useSentimentData = document.getElementById("useSentimentData");
+      const htfIntervalSelect = document.getElementById("htfIntervalSelect");
+      const htfLookbackSelect = document.getElementById("htfLookbackSelect");
+      const backtestMeta = document.getElementById("backtestMeta");
+      const abMeta = document.getElementById("abMeta");
+      const btFinal = document.getElementById("btFinal");
+      const btReturn = document.getElementById("btReturn");
+      const btTrades = document.getElementById("btTrades");
+      const btWinRate = document.getElementById("btWinRate");
+      const btFees = document.getElementById("btFees");
+      const btFunding = document.getElementById("btFunding");
+      const btMdd = document.getElementById("btMdd");
+      const cumTrades = document.getElementById("cumTrades");
+      const cumProfitTrades = document.getElementById("cumProfitTrades");
+      const cumLossTrades = document.getElementById("cumLossTrades");
+      const cumProfit = document.getElementById("cumProfit");
+      const cumLoss = document.getElementById("cumLoss");
+      const cumNet = document.getElementById("cumNet");
+      const abOnStats = document.getElementById("abOnStats");
+      const abOffStats = document.getElementById("abOffStats");
+      const backtestTradeRows = document.getElementById("backtestTradeRows");
+      let autoTimer = null;
+      let rollingCapital = 1000.0;
+      let backtestAbortController = null;
+      let cumulativeTrades = [];
+
+      const numFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
+
+      function setDirectionClass(element, direction) {
+        element.classList.remove("direction-long", "direction-short", "direction-flat");
+        if (direction === "LONG") element.classList.add("direction-long");
+        if (direction === "SHORT") element.classList.add("direction-short");
+        if (direction === "FLAT") element.classList.add("direction-flat");
+      }
+
+      function updateCumulativeStats() {
+        const wins = cumulativeTrades.filter((trade) => trade.net_pnl > 0);
+        const losses = cumulativeTrades.filter((trade) => trade.net_pnl < 0);
+        const profitSum = wins.reduce((acc, trade) => acc + trade.net_pnl, 0);
+        const lossSum = losses.reduce((acc, trade) => acc + trade.net_pnl, 0);
+
+        cumTrades.textContent = String(cumulativeTrades.length);
+        cumProfitTrades.textContent = String(wins.length);
+        cumLossTrades.textContent = String(losses.length);
+        cumProfit.textContent = numFmt.format(profitSum);
+        cumLoss.textContent = numFmt.format(lossSum);
+        cumNet.textContent = numFmt.format(profitSum + lossSum);
+      }
+
+      function closeBehaviorModal() {
+        const modal = document.getElementById("behaviorModal");
+        modal.classList.remove("active");
+      }
+
+      function showMarketBehaviorModal() {
+        const behavior = window.marketBehaviorData;
+        if (!behavior) {
+          alert("Market behavior data not available. Please refresh the dashboard first.");
+          return;
+        }
+        
+        const modal = document.getElementById("behaviorModal");
+        const modalBody = document.getElementById("modalBody");
+        
+        let html = "";
+        
+        if (behavior.error) {
+          html = `
+            <div class="behavior-section">
+              <h3>⚠️ Analysis Error</h3>
+              <div class="behavior-details">
+                <p><strong>Status:</strong> Could not analyze market behavior</p>
+                <p>${behavior.error}</p>
+              </div>
+            </div>
+          `;
+        } else {
+          const regime = behavior.regime || "UNKNOWN";
+          const bias = behavior.bias || "NEUTRAL";
+          const mode = behavior.mode || "UNKNOWN";
+          const strength = Math.round(behavior.bias_strength * 100);
+          
+          html = `
+            <div class="behavior-section">
+              <h3>📊 Multi-Timeframe Market Analysis</h3>
+              <div class="behavior-details">
+                <div class="behavior-stat">
+                  <label>Regime:</label>
+                  <value>${regime}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Bias:</label>
+                  <value>${bias}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Mode:</label>
+                  <value>${mode}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Bias Strength:</label>
+                  <value>${strength}%</value>
+                </div>
+              </div>
+            </div>
+            
+            <div class="behavior-section">
+              <h3>📈 Trend & Support Levels</h3>
+              <div class="behavior-details">
+                <p><strong>Current Regime:</strong> ${regime}</p>
+                <p><strong>Market Direction:</strong> ${bias === "BULLISH" ? "🟢 Bullish bias" : bias === "BEARISH" ? "🔴 Bearish bias" : "⚪ Neutral"}</p>
+                <p><strong>Price Action:</strong> ${mode === "TRENDING" ? "Strong directional movement" : "Oscillating within range"}</p>
+              </div>
+            </div>
+            
+            <div class="behavior-section">
+              <h3>💡 Trading Recommendations</h3>
+              <div class="behavior-details">
+                ${bias === "BULLISH" ? `
+                  <p>• <strong>Long Setup:</strong> Buy on pullbacks to support zones</p>
+                  <p>• <strong>Resistance:</strong> Watch for breakouts above recent highs</p>
+                  <p>• <strong>Risk:</strong> Be ready for reversals near resistance</p>
+                ` : bias === "BEARISH" ? `
+                  <p>• <strong>Short Setup:</strong> Sell into resistance zones</p>
+                  <p>• <strong>Support:</strong> Watch for breaks below recent lows</p>
+                  <p>• <strong>Risk:</strong> Be ready for reversals near support</p>
+                ` : `
+                  <p>• <strong>Strategy:</strong> Neutral stance, wait for confirmation</p>
+                  <p>• <strong>Opportunity:</strong> Position for directional breakout</p>
+                  <p>• <strong>Focus:</strong> Key support and resistance zones</p>
+                `}
+              </div>
+            </div>
+            
+            ${behavior.breakdown ? `
+            <div class="behavior-section">
+              <h3>📊 Detailed Breakdown</h3>
+              <div class="behavior-details">
+                <pre style="font-size: 11px; color: #d1d5db; white-space: pre-wrap; word-wrap: break-word; background: #0f1419; padding: 12px; border-radius: 4px;">${JSON.stringify(behavior.breakdown, null, 2)}</pre>
+              </div>
+            </div>
+            ` : ""}
+          `;
+        }
+        
+        modalBody.innerHTML = html;
+        modal.classList.add("active");
+      }
+
+      function showBehaviorAnalysis(behavior) {
+        const modal = document.getElementById("behaviorModal");
+        const modalBody = document.getElementById("modalBody");
+        
+        let html = "";
+        
+        if (behavior.type === "uptrend") {
+          html = `
+            <div class="behavior-section">
+              <h3>🔥 Strong Uptrend Detected</h3>
+              <div class="behavior-details">
+                <p><strong>Market Structure:</strong> Consecutive higher highs and higher lows with sustained upward momentum.</p>
+                <div class="behavior-stat">
+                  <label>Strength:</label>
+                  <value>${behavior.strength}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Trend Duration:</label>
+                  <value>${behavior.duration || 'N/A'}</value>
+                </div>
+                <p><strong>Trading Implication:</strong> Consider LONG positions in pullbacks to support zones. Risk management is critical as reversals can be sharp.</p>
+                <p><strong>Key Levels:</strong> Watch for resistance at recent highs. Support zones are key for entry optimization.</p>
+              </div>
+            </div>
+          `;
+        } else if (behavior.type === "downtrend") {
+          html = `
+            <div class="behavior-section">
+              <h3>📉 Strong Downtrend Detected</h3>
+              <div class="behavior-details">
+                <p><strong>Market Structure:</strong> Consecutive lower highs and lower lows with sustained downward pressure.</p>
+                <div class="behavior-stat">
+                  <label>Strength:</label>
+                  <value>${behavior.strength}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Trend Duration:</label>
+                  <value>${behavior.duration || 'N/A'}</value>
+                </div>
+                <p><strong>Trading Implication:</strong> Favor SHORT positions into resistance zones. Scalp reversals near key levels.</p>
+                <p><strong>Key Levels:</strong> Resistance forms at previous highs. Watch for bounces that provide short entries.</p>
+              </div>
+            </div>
+          `;
+        } else if (behavior.type === "ranging") {
+          html = `
+            <div class="behavior-section">
+              <h3>➡️ Range-Bound Market</h3>
+              <div class="behavior-details">
+                <p><strong>Market Structure:</strong> Price oscillating between defined support and resistance levels.</p>
+                <div class="behavior-stat">
+                  <label>Range High:</label>
+                  <value>${behavior.high}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Range Low:</label>
+                  <value>${behavior.low}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Range Width:</label>
+                  <value>${behavior.width}</value>
+                </div>
+                <p><strong>Trading Implication:</strong> Mean reversion strategies work well. Buy near support, sell near resistance.</p>
+                <p><strong>Caution:</strong> Watch for breakouts. A break above/below the range can reverse momentum dramatically.</p>
+              </div>
+            </div>
+          `;
+        } else if (behavior.type === "breakout") {
+          html = `
+            <div class="behavior-section">
+              <h3>⚡ Breakout Detected</h3>
+              <div class="behavior-details">
+                <p><strong>Market Structure:</strong> Price has broken above resistance or below support with strong momentum.</p>
+                <div class="behavior-stat">
+                  <label>Breakout Direction:</label>
+                  <value>${behavior.direction}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Volume Confirmation:</label>
+                  <value>${behavior.volume_confirmed ? 'Yes' : 'Weak'}</value>
+                </div>
+                <p><strong>Trading Implication:</strong> Factor in the direction of the breakout. Ride the momentum with trailing stops for downside protection.</p>
+                <p><strong>Risk:</strong> False breakouts are common. Confirm with volume and price action before committing capital.</p>
+              </div>
+            </div>
+          `;
+        } else if (behavior.type === "volatility_spike") {
+          html = `
+            <div class="behavior-section">
+              <h3>⚠️ Volatility Spike Alert</h3>
+              <div class="behavior-details">
+                <p><strong>Market Condition:</strong> Significant increase in volatility, indicating heightened market uncertainty or upcoming catalysts.</p>
+                <div class="behavior-stat">
+                  <label>Volatility Level:</label>
+                  <value>${behavior.level}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Average Range Change:</label>
+                  <value>${behavior.range_change}</value>
+                </div>
+                <p><strong>Trading Implication:</strong> Reduce position sizes or avoid trading during extreme volatility. Use wider stops to avoid whipsaws.</p>
+                <p><strong>Opportunity:</strong> Once volatility stabilizes, expect strong directional moves. Position for the breakout.</p>
+              </div>
+            </div>
+          `;
+        } else if (behavior.type === "consolidation") {
+          html = `
+            <div class="behavior-section">
+              <h3>🔄 Consolidation Pattern</h3>
+              <div class="behavior-details">
+                <p><strong>Market Structure:</strong> Low volatility period with price stuck in a tight range, often preceding a breakout.</p>
+                <div class="behavior-stat">
+                  <label>Consolidation Duration:</label>
+                  <value>${behavior.duration || 'N/A'}</value>
+                </div>
+                <div class="behavior-stat">
+                  <label>Range Containment:</label>
+                  <value>${behavior.range || 'N/A'}</value>
+                </div>
+                <p><strong>Trading Implication:</strong> Prepare for a breakout. Build a small position or wait for the break to confirm direction.</p>
+                <p><strong>Strategy:</strong> Place conditional orders just above resistance and below support to capture the breakout.</p>
+              </div>
+            </div>
+          `;
+        } else {
+          html = `
+            <div class="behavior-section">
+              <h3>📊 Market Behavior Analysis</h3>
+              <div class="behavior-details">
+                <p><strong>Status:</strong> ${behavior.message || 'Analysis in progress'}</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        modalBody.innerHTML = html;
+        modal.classList.add("active");
+      }
+
+      function renderTradeRows(trades) {
+        if (!Array.isArray(trades) || trades.length === 0) {
+          backtestTradeRows.innerHTML = '<tr><td colspan="10" style="color:#8ca3c7;">No trades for this run.</td></tr>';
+          return;
+        }
+
+        backtestTradeRows.innerHTML = trades
+          .map((trade, idx) => {
+            const pnlClass = trade.net_pnl >= 0 ? "pnl-pos" : "pnl-neg";
+            return `
+              <tr>
+                <td>${idx + 1}</td>
+                <td>${trade.side}</td>
+                <td>${trade.entry_time_local || "-"}</td>
+                <td>${trade.exit_time_local || "-"}</td>
+                <td>${Number(trade.duration_minutes || 0).toFixed(2)}</td>
+                <td>${numFmt.format(trade.entry_price)}</td>
+                <td>${numFmt.format(trade.exit_price)}</td>
+                <td class="${pnlClass}">${numFmt.format(trade.net_pnl)}</td>
+                <td class="${pnlClass}">${Number(trade.roi_pct || 0).toFixed(2)}%</td>
+                <td>${trade.reason}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function buildHeatmap(candles, liq) {
+        const times = candles.map((c) => new Date(c.open_time));
+        const allPrices = candles.flatMap((c) => [c.high, c.low]);
+        const minP = Math.min(...allPrices) * 0.992;
+        const maxP = Math.max(...allPrices) * 1.008;
+
+        const rows = 110;
+        const yBins = Array.from({ length: rows }, (_, i) => minP + ((maxP - minP) * i) / (rows - 1));
+        const z = yBins.map(() => Array(times.length).fill(0.01));
+
+        const findRow = (price) => {
+          const idx = yBins.findIndex((v) => v >= price);
+          return idx < 0 ? rows - 1 : idx;
+        };
+
+        const paintSegment = (row, thickness, xStart, xEnd, boost) => {
+          const startX = Math.max(0, xStart);
+          const endX = Math.min(times.length - 1, xEnd);
+          const lowY = Math.max(0, row - thickness);
+          const highY = Math.min(rows - 1, row + thickness);
+          for (let x = startX; x <= endX; x++) {
+            for (let y = lowY; y <= highY; y++) {
+              z[y][x] += boost;
+            }
+          }
+        };
+
+        for (const level of liq.levels_above) {
+          const row = findRow(level.level_price);
+          const weight = Math.max(level.strength * 150, 0.12);
+          const span = Math.max(10, Math.round((115 - level.leverage) * 0.8));
+          const start = Math.max(0, times.length - span - (Math.round(level.distance_bps) % 9));
+          paintSegment(row, 1, start, times.length - 1, weight);
+        }
+
+        for (const level of liq.levels_below) {
+          const row = findRow(level.level_price);
+          const weight = Math.max(level.strength * 150, 0.12);
+          const span = Math.max(10, Math.round((115 - level.leverage) * 0.8));
+          const start = Math.max(0, times.length - span - (Math.round(level.distance_bps) % 11));
+          paintSegment(row, 1, start, times.length - 1, weight);
+        }
+
+        for (const cluster of [...liq.clusters_above, ...liq.clusters_below]) {
+          const mid = (cluster.min_price + cluster.max_price) / 2;
+          const row = findRow(mid);
+          const width = Math.max(2, Math.min(4, cluster.contributing_levels + 1));
+          const boost = Math.max(cluster.total_strength * 130, 0.25);
+          const span = Math.max(18, Math.round(times.length * 0.45));
+          const jitter = Math.abs(Math.round(mid * 1000)) % 13;
+          const start = Math.max(0, times.length - span - jitter);
+          paintSegment(row, width, start, times.length - 1, boost);
+        }
+
+        const heatmap = {
+          type: "heatmap",
+          x: times,
+          y: yBins,
+          z,
+          colorscale: [
+            [0, "#2a0355"],
+            [0.4, "#4c0b84"],
+            [0.7, "#13b5bf"],
+            [1, "#ebf01a"]
+          ],
+          showscale: false,
+          hovertemplate: "Time: %{x}<br>Price: %{y:.4f}<br>Relative intensity: %{z:.3f}<extra></extra>",
+          opacity: 0.9
+        };
+
+        const candleTrace = {
+          type: "candlestick",
+          x: times,
+          open: candles.map((c) => c.open),
+          high: candles.map((c) => c.high),
+          low: candles.map((c) => c.low),
+          close: candles.map((c) => c.close),
+          increasing: { line: { color: "#2dd4bf", width: 1.1 } },
+          decreasing: { line: { color: "#fb7185", width: 1.1 } },
+          whiskerwidth: 0.3,
+          hoverlabel: { bgcolor: "#0f172a" }
+        };
+
+        const levelLines = [];
+        for (const level of liq.levels_above) {
+          levelLines.push({
+            type: "line",
+            x0: times[Math.max(0, times.length - 50)],
+            x1: times[times.length - 1],
+            y0: level.level_price,
+            y1: level.level_price,
+            line: { color: "rgba(244,63,94,0.33)", width: 1 }
+          });
+        }
+        for (const level of liq.levels_below) {
+          levelLines.push({
+            type: "line",
+            x0: times[Math.max(0, times.length - 50)],
+            x1: times[times.length - 1],
+            y0: level.level_price,
+            y1: level.level_price,
+            line: { color: "rgba(34,197,94,0.33)", width: 1 }
+          });
+        }
+
+        const layout = {
+          paper_bgcolor: "#0b122b",
+          plot_bgcolor: "#0b122b",
+          margin: { l: 54, r: 16, t: 12, b: 40 },
+          xaxis: { showgrid: false, color: "#c8ddff" },
+          yaxis: { showgrid: false, color: "#c8ddff", tickformat: ".4f" },
+          shapes: levelLines,
+          showlegend: false
+        };
+
+        Plotly.newPlot("liqChart", [heatmap, candleTrace], layout, {
+          responsive: true,
+          displayModeBar: false
+        });
+      }
+
+      async function loadDashboard() {
+        const symbol = pairSelect.value;
+        refreshBtn.disabled = true;
+        refreshMeta.textContent = "Refreshing...";
+
+        try {
+          const [signalRes, explainRes, liqRes, candleRes, behaviorRes] = await Promise.all([
+            fetch(`/signal?symbol=${symbol}`),
+            fetch(`/signal/explain?symbol=${symbol}`),
+            fetch(`/liquidation-map?symbol=${symbol}`),
+            fetch(`/market/candles?symbol=${symbol}&interval=1m&limit=120`),
+            fetch(`/market/behavior?symbol=${symbol}`)
+          ]);
+
+          if (!signalRes.ok || !explainRes.ok || !liqRes.ok || !candleRes.ok) {
+            throw new Error("One or more API requests failed.");
+          }
+
+          const signal = await signalRes.json();
+          const explain = await explainRes.json();
+          const liq = await liqRes.json();
+          const candleData = await candleRes.json();
+          const behavior = behaviorRes.ok ? await behaviorRes.json() : null;
+
+          // Store market behavior for modal display
+          window.marketBehaviorData = behavior;
+
+          directionValue.textContent = signal.direction;
+          setDirectionClass(directionValue, signal.direction);
+          confidenceValue.textContent = `${(signal.confidence * 100).toFixed(1)}%`;
+          methodValue.textContent = liq.methodology;
+          priceValue.textContent = numFmt.format(signal.current_price);
+          if (signal.direction === "FLAT") {
+            tpValue.textContent = "N/A (FLAT)";
+            slValue.textContent = "N/A (FLAT)";
+          } else {
+            tpValue.textContent = numFmt.format(signal.tp);
+            slValue.textContent = numFmt.format(signal.sl);
+          }
+          reasonsValue.textContent = `Reasons: ${signal.reasons.join(", ") || "-"}`;
+
+          pullValue.textContent = liq.dominant_pull;
+          setDirectionClass(pullValue, liq.dominant_pull);
+          pullConfidence.textContent = `Dominance confidence: ${(liq.confidence * 100).toFixed(1)}%`;
+
+          explainJson.textContent = JSON.stringify(explain, null, 2);
+
+          buildHeatmap(candleData.candles, liq);
+
+          const now = new Date();
+          refreshMeta.textContent = `Last refresh: ${now.toLocaleString()} | Pair: ${symbol}`;
+        } catch (error) {
+          refreshMeta.textContent = `Error: ${error.message}`;
+        } finally {
+          refreshBtn.disabled = false;
+        }
+      }
+
+      async function runBacktest() {
+        const symbol = pairSelect.value;
+        const runStartCapital = rollingCapital;
+        const useLiq = useLiqForBacktest.checked;
+        const useHtf = useHtfFilter.checked;
+        const useSentiment = useSentimentData.checked;
+        const htfInterval = htfIntervalSelect.value;
+        const htfLookback = htfLookbackSelect.value;
+        runBacktestBtn.disabled = true;
+        stopBacktestBtn.disabled = false;
+        backtestMeta.textContent = "Running backtest...";
+        btInitial.textContent = runStartCapital.toFixed(2);
+        backtestAbortController = new AbortController();
+
+        try {
+          const url = `/bot/backtest?symbol=${symbol}&interval=1m&candle_limit=300&initial_capital=${runStartCapital}&fee_rate=0.0004&leverage=1&confidence_threshold=0.5&max_trades=50&use_liquidation_data=${useLiq}&use_htf_filter=${useHtf}&htf_interval=${htfInterval}&htf_lookback=${htfLookback}&use_sentiment_data=${useSentiment}`;
+          const response = await fetch(url, { signal: backtestAbortController.signal });
+          if (!response.ok) {
+            throw new Error("Backtest API failed");
+          }
+
+          const data = await response.json();
+          rollingCapital = data.final_capital;
+          btFinal.textContent = numFmt.format(data.final_capital);
+          btReturn.textContent = `${data.return_pct.toFixed(2)}%`;
+          btTrades.textContent = String(data.total_trades);
+          btWinRate.textContent = `${(data.win_rate * 100).toFixed(1)}%`;
+          btFees.textContent = numFmt.format(data.fees_paid);
+          btFunding.textContent = numFmt.format(data.funding_paid);
+          btMdd.textContent = `${data.max_drawdown_pct.toFixed(2)}%`;
+
+          cumulativeTrades = cumulativeTrades.concat(data.trades || []);
+          updateCumulativeStats();
+          renderTradeRows(data.trades || []);
+
+          backtestMeta.textContent = `Backtest complete for ${symbol}. Start=${runStartCapital.toFixed(2)}, End=${data.final_capital.toFixed(2)} | Liquidation: ${useLiq ? "ON" : "OFF"}, HTF: ${useHtf ? `${htfInterval}/${htfLookback}` : "OFF"}, Sentiment: ${useSentiment ? "ON" : "OFF"} | Next run starts from latest final capital.`;
+        } catch (error) {
+          if (error.name === "AbortError") {
+            backtestMeta.textContent = "Backtest stopped by user.";
+          } else {
+            backtestMeta.textContent = `Backtest error: ${error.message}`;
+          }
+        } finally {
+          backtestAbortController = null;
+          stopBacktestBtn.disabled = true;
+          runBacktestBtn.disabled = false;
+        }
+      }
+
+      async function runABComparison() {
+        const symbol = pairSelect.value;
+        const compareCapital = rollingCapital;
+        runABBtn.disabled = true;
+        abMeta.textContent = "Running A/B comparison...";
+
+        try {
+          const useHtf = useHtfFilter.checked;
+          const useSentiment = useSentimentData.checked;
+          const htfInterval = htfIntervalSelect.value;
+          const htfLookback = htfLookbackSelect.value;
+          const base = `/bot/backtest?symbol=${symbol}&interval=1m&candle_limit=300&initial_capital=${compareCapital}&fee_rate=0.0004&leverage=1&confidence_threshold=0.5&max_trades=50&use_htf_filter=${useHtf}&htf_interval=${htfInterval}&htf_lookback=${htfLookback}&use_sentiment_data=${useSentiment}`;
+          const [onRes, offRes] = await Promise.all([
+            fetch(`${base}&use_liquidation_data=true`),
+            fetch(`${base}&use_liquidation_data=false`)
+          ]);
+
+          if (!onRes.ok || !offRes.ok) {
+            throw new Error("A/B comparison request failed");
+          }
+
+          const onData = await onRes.json();
+          const offData = await offRes.json();
+
+          abOnStats.innerHTML = `Start: ${compareCapital.toFixed(2)}<br>End: ${onData.final_capital.toFixed(2)}<br>Return: ${onData.return_pct.toFixed(2)}%<br>Win Rate: ${(onData.win_rate * 100).toFixed(1)}%<br>Trades: ${onData.total_trades}`;
+          abOffStats.innerHTML = `Start: ${compareCapital.toFixed(2)}<br>End: ${offData.final_capital.toFixed(2)}<br>Return: ${offData.return_pct.toFixed(2)}%<br>Win Rate: ${(offData.win_rate * 100).toFixed(1)}%<br>Trades: ${offData.total_trades}`;
+
+          abMeta.textContent = `A/B comparison complete for ${symbol} using identical start capital ${compareCapital.toFixed(2)} | HTF: ${useHtf ? `${htfInterval}/${htfLookback}` : "OFF"}, Sentiment: ${useSentiment ? "ON" : "OFF"}.`;
+        } catch (error) {
+          abMeta.textContent = `A/B error: ${error.message}`;
+        } finally {
+          runABBtn.disabled = false;
+        }
+      }
+
+      function resetBacktestState() {
+        if (backtestAbortController) {
+          backtestAbortController.abort();
+        }
+        rollingCapital = 1000.0;
+        cumulativeTrades = [];
+
+        btInitial.textContent = "1000.00";
+        btFinal.textContent = "-";
+        btReturn.textContent = "-";
+        btTrades.textContent = "-";
+        btWinRate.textContent = "-";
+        btFees.textContent = "-";
+        btFunding.textContent = "-";
+        btMdd.textContent = "-";
+        backtestTradeRows.innerHTML = '<tr><td colspan="10" style="color:#8ca3c7;">No trades yet.</td></tr>';
+        backtestMeta.textContent = "Bot test state reset. Next run starts from 1000.00.";
+        abMeta.textContent = "A/B comparison not run yet.";
+        abOnStats.textContent = "-";
+        abOffStats.textContent = "-";
+        updateCumulativeStats();
+      }
+
+      refreshBtn.addEventListener("click", loadDashboard);
+      pairSelect.addEventListener("change", loadDashboard);
+      runBacktestBtn.addEventListener("click", runBacktest);
+      stopBacktestBtn.addEventListener("click", () => {
+        if (backtestAbortController) {
+          backtestAbortController.abort();
+        }
+      });
+      resetBacktestBtn.addEventListener("click", resetBacktestState);
+      runABBtn.addEventListener("click", runABComparison);
+      autoRefresh.addEventListener("change", () => {
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+        }
+        if (autoRefresh.checked) {
+          autoTimer = setInterval(loadDashboard, 30000);
+          refreshMeta.textContent = `${refreshMeta.textContent} | Auto refresh ON`;
+        }
+      });
+
+      // Modal: Close when clicking outside
+      const behaviorModal = document.getElementById("behaviorModal");
+      behaviorModal.addEventListener("click", (e) => {
+        if (e.target === behaviorModal) {
+          closeBehaviorModal();
+        }
+      });
+
+      loadDashboard();
+      updateCumulativeStats();
+    </script>
+  </body>
+</html>
