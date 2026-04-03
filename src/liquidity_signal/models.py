@@ -153,6 +153,7 @@ class LiquidationAssumptions(BaseModel):
     cluster_step_bps: float
     open_interest_change_pct: float
     price_return_pct: float
+    funding_rate_bps: float
     inferred_long_crowding: float
     inferred_short_crowding: float
 
@@ -169,6 +170,44 @@ class LiquidationMapResponse(BaseModel):
     clusters_above: List[LiquidationCluster]
     clusters_below: List[LiquidationCluster]
     assumptions: LiquidationAssumptions
+    meta: dict[str, float]
+
+
+class LiquidationEventPoint(BaseModel):
+    source: str
+    side: Direction
+    price: float
+    quantity: float
+    timestamp: int
+
+
+class LiquidationDataQuality(BaseModel):
+    estimate_weight: float = Field(ge=0.0, le=1.0)
+    event_weight: float = Field(ge=0.0, le=1.0)
+    bybit_available: bool
+    event_overlay_active: bool
+    events_used: int = Field(ge=0)
+    degraded_mode: bool
+    source_age_ms: int | None = Field(default=None, ge=0)
+    degraded_reason: str | None = None
+    notes: List[str]
+
+
+class LiquidationMapAdvancedResponse(BaseModel):
+    symbol: str
+    current_price: float
+    dominant_pull: Direction
+    confidence: float = Field(ge=0.0, le=1.0)
+    methodology: str
+    source: str
+    generated_at: int
+    levels_above: List[LiquidationLevel]
+    levels_below: List[LiquidationLevel]
+    clusters_above: List[LiquidationCluster]
+    clusters_below: List[LiquidationCluster]
+    assumptions: LiquidationAssumptions
+    quality: LiquidationDataQuality
+    events: List[LiquidationEventPoint]
     meta: dict[str, float]
 
 

@@ -5,7 +5,8 @@ from typing import Any
 
 from liquidity_signal.config import SignalConfig
 from liquidity_signal.data.binance_client import BinanceFuturesClient
-from liquidity_signal.features.liquidation_map import build_liquidation_map_estimate
+from liquidity_signal.data.bybit_client import BybitPublicClient
+from liquidity_signal.features.liquidation_map import build_liquidation_map_advanced, build_liquidation_map_estimate
 from liquidity_signal.features.liquidity_features import build_liquidity_features
 from liquidity_signal.features.mtf_regime import MTFRegimeAnalyzer, MarketRegime
 from liquidity_signal.models import (
@@ -15,7 +16,7 @@ from liquidity_signal.models import (
     CandleResponse,
     Direction,
     EquityPoint,
-    LiquidationMapResponse,
+    LiquidationMapAdvancedResponse,
     SignalExplainResult,
     SignalResult,
 )
@@ -25,12 +26,55 @@ from liquidity_signal.signal.scorer import score_features_with_breakdown
 
 
 class SignalEngine:
-    def __init__(self, client: BinanceFuturesClient | None = None, cfg: SignalConfig | None = None) -> None:
+    def __init__(
+        self,
+        client: BinanceFuturesClient | None = None,
+        cfg: SignalConfig | None = None,
+        bybit_client: BybitPublicClient | None = None,
+    ) -> None:
         self.client = client or BinanceFuturesClient()
         self.cfg = cfg or SignalConfig()
+        self.bybit_client = bybit_client or BybitPublicClient()
 
     def close(self) -> None:
         self.client.close()
+        self.bybit_client.close()
+
+    def _apply_liquidation_overlay(
+        self,
+        direction: Direction,
+        confidence: float,
+        reasons: list[str],
+        liq_map: LiquidationMapAdvancedResponse,
+    ) -> tuple[Direction, float, list[str]]:
+        updated_reasons = list(reasons)
+        liq_conf = max(0.0, min(liq_map.confidence, 1.0))
+
+        if liq_map.quality.degraded_mode:
+            updated_reasons.append("Liquidation overlay degraded: using estimate-only mode")
+
+        if liq_map.dominant_pull == Direction.FLAT:
+            updated_reasons.append("Liquidation map neutral")
+            return direction, confidence, updated_reasons
+
+        if direction == Direction.FLAT and liq_conf >= 0.60:
+            new_direction = liq_map.dominant_pull
+            new_confidence = max(confidence, min(0.75, 0.55 + 0.20 * liq_conf))
+            updated_reasons.append(f"Liquidation map set bias to {new_direction.value}")
+            return new_direction, new_confidence, updated_reasons
+
+        if direction == liq_map.dominant_pull:
+            new_confidence = min(1.0, confidence + 0.12 * liq_conf)
+            updated_reasons.append("Liquidation map confirms signal direction")
+        else:
+            new_confidence = max(0.0, confidence - 0.15 * liq_conf)
+            updated_reasons.append("Liquidation map opposes signal direction")
+
+        if new_confidence < self.cfg.min_confidence:
+            updated_reasons.append("Confidence dropped below threshold after liquidation filter")
+            return Direction.FLAT, new_confidence, updated_reasons
+
+        return direction, new_confidence, updated_reasons
 
     def generate_signal(self, symbol: str = "BTCUSDT") -> SignalResult:
         mark_price = self.client.get_mark_price(symbol)
@@ -45,6 +89,13 @@ class SignalEngine:
             direction = ai_direction
             confidence = ai_confidence
             reasons = reasons + ["AI refinement active"]
+
+        try:
+            liq_map = self.generate_liquidation_map_advanced(symbol=symbol, include_events=True, event_limit=50)
+            direction, confidence, reasons = self._apply_liquidation_overlay(direction, confidence, reasons, liq_map)
+        except Exception:
+            reasons = reasons + ["Liquidation overlay unavailable"]
+
         tp, sl = compute_tp_sl(direction, features.mark_price, confidence, features, self.cfg)
 
         return SignalResult(
@@ -70,6 +121,13 @@ class SignalEngine:
             direction = ai_direction
             confidence = ai_confidence
             reasons = reasons + ["AI refinement active"]
+
+        try:
+            liq_map = self.generate_liquidation_map_advanced(symbol=symbol, include_events=True, event_limit=50)
+            direction, confidence, reasons = self._apply_liquidation_overlay(direction, confidence, reasons, liq_map)
+        except Exception:
+            reasons = reasons + ["Liquidation overlay unavailable"]
+
         tp, sl, risk = compute_tp_sl_with_breakdown(direction, features.mark_price, confidence, features, self.cfg)
 
         signal = SignalResult(
@@ -83,11 +141,50 @@ class SignalEngine:
         )
         return SignalExplainResult(signal=signal, features=features, scoring=scoring, risk=risk, ai_refinement=ai_refinement)
 
-    def generate_liquidation_map(self, symbol: str = "BTCUSDT") -> LiquidationMapResponse:
+    def generate_liquidation_map(self, symbol: str = "BTCUSDT") -> LiquidationMapAdvancedResponse:
+        return self.generate_liquidation_map_advanced(symbol=symbol, include_events=True, event_limit=50)
+
+    def generate_liquidation_map_advanced(
+        self,
+        symbol: str = "BTCUSDT",
+        include_events: bool = True,
+        event_limit: int = 50,
+    ) -> LiquidationMapAdvancedResponse:
         mark_price = self.client.get_mark_price(symbol)
         oi_hist = self.client.get_open_interest_hist(symbol, period="5m", limit=30)
         klines = self.client.get_recent_klines(symbol, interval="1m", limit=60)
-        return build_liquidation_map_estimate(symbol, mark_price, oi_hist, klines)
+        try:
+            funding_rates = self.client.get_funding_rates(symbol, limit=30)
+        except Exception:
+            funding_rates = []
+
+        bybit_events: list[dict[str, Any]] | None = None
+        bybit_fetched_at_ms: int | None = None
+        degraded_reason: str | None = None
+        if include_events:
+            try:
+                if hasattr(self.bybit_client, "get_recent_liquidations_with_meta"):
+                    bybit_events, bybit_fetched_at_ms, degraded_reason = self.bybit_client.get_recent_liquidations_with_meta(
+                        symbol=symbol, limit=event_limit
+                    )
+                else:
+                    bybit_events = self.bybit_client.get_recent_liquidations(symbol=symbol, limit=event_limit)
+                    bybit_fetched_at_ms = int(datetime.now().timestamp() * 1000)
+            except Exception as exc:
+                bybit_events = None
+                degraded_reason = f"Bybit fetch exception: {exc}"
+
+        return build_liquidation_map_advanced(
+            symbol=symbol,
+            mark_price=mark_price,
+            oi_hist=oi_hist,
+            klines=klines,
+            funding_rates=funding_rates,
+            bybit_events_raw=bybit_events,
+            include_events=include_events,
+            bybit_fetched_at_ms=bybit_fetched_at_ms,
+            degraded_reason=degraded_reason,
+        )
 
     def generate_candles(self, symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 120) -> CandleResponse:
         rows = self.client.get_recent_klines(symbol, interval=interval, limit=limit)

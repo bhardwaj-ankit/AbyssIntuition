@@ -7,7 +7,13 @@ from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from liquidity_signal.models import BotBacktestResponse, CandleResponse, LiquidationMapResponse, SignalExplainResult, SignalResult
+from liquidity_signal.models import (
+    BotBacktestResponse,
+    CandleResponse,
+    LiquidationMapAdvancedResponse,
+    SignalExplainResult,
+    SignalResult,
+)
 from liquidity_signal.service.engine import SignalEngine
 
 app = FastAPI(title="Liquidity Signal API", version="0.1.0")
@@ -37,9 +43,15 @@ def signal_explain(symbol: str = Query(default="BTCUSDT")) -> SignalExplainResul
     return engine.generate_signal_explain(symbol.upper())
 
 
-@app.get("/liquidation-map", response_model=LiquidationMapResponse)
-def liquidation_map(symbol: str = Query(default="BTCUSDT")) -> LiquidationMapResponse:
-    return engine.generate_liquidation_map(symbol.upper())
+@app.get("/liquidation-map", response_model=LiquidationMapAdvancedResponse)
+def liquidation_map(
+    symbol: str = Query(default="BTCUSDT"),
+    include_events: bool = Query(default=True),
+    event_limit: int = Query(default=50, ge=1, le=200),
+) -> LiquidationMapAdvancedResponse:
+    return engine.generate_liquidation_map_advanced(
+        symbol=symbol.upper(), include_events=include_events, event_limit=event_limit
+    )
 
 
 @app.get("/market/candles", response_model=CandleResponse)

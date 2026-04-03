@@ -6,9 +6,8 @@ trading strategy optimization.
 """
 
 from typing import List, Optional
-from datetime import datetime
 
-from liquidity_signal.models import Candle, Direction, MarketBehavior
+from liquidity_signal.models import Candle, MarketBehavior
 
 
 class MarketBehaviorAnalyzer:
