@@ -23,7 +23,8 @@ def test_liquidation_map_outputs_levels() -> None:
     assert len(result.levels_below) == 5
     assert result.clusters_above
     assert result.clusters_below
-    assert result.assumptions.leverage_buckets == [10, 25, 50, 75, 100]
+    assert result.assumptions.leverage_buckets == [5, 10, 25, 50, 100]
+    assert result.assumptions.heatmap_resolution == 48
     assert 0.0 <= result.confidence <= 1.0
     assert result.methodology
 
@@ -34,11 +35,18 @@ def test_liquidation_map_uses_funding_to_shift_crowding() -> None:
         {"sumOpenInterestValue": "1200000000"},
     ]
 
+    baseline = build_liquidation_map_estimate(
+        "BTCUSDT",
+        100.0,
+        oi_hist,
+        _sample_klines(up=True),
+        funding_rates=[{"fundingRate": "0.0000"}],
+    )
     positive_funding = build_liquidation_map_estimate(
         "BTCUSDT",
         100.0,
         oi_hist,
-        _sample_klines(up=False),
+        _sample_klines(up=True),
         funding_rates=[{"fundingRate": "0.0010"}],
     )
     negative_funding = build_liquidation_map_estimate(
@@ -50,9 +58,9 @@ def test_liquidation_map_uses_funding_to_shift_crowding() -> None:
     )
 
     assert positive_funding.assumptions.funding_rate_bps > 0.0
-    assert positive_funding.assumptions.inferred_long_crowding > positive_funding.assumptions.inferred_short_crowding
+    assert positive_funding.assumptions.inferred_long_crowding > baseline.assumptions.inferred_long_crowding
     assert negative_funding.assumptions.funding_rate_bps < 0.0
-    assert negative_funding.assumptions.inferred_short_crowding > negative_funding.assumptions.inferred_long_crowding
+    assert negative_funding.assumptions.inferred_short_crowding > baseline.assumptions.inferred_short_crowding
 
 
 def test_liquidation_map_pull_direction_changes_with_trend() -> None:
@@ -92,7 +100,7 @@ def test_advanced_map_degrades_when_bybit_unavailable() -> None:
     assert result.quality.event_weight == 0.0
     assert result.quality.degraded_reason == "Bybit test failure"
     assert result.quality.source_age_ms is None
-    assert result.source == "binance_estimate_fallback"
+    assert result.source == "binance_model_only"
     assert result.events == []
 
 
@@ -122,11 +130,13 @@ def test_advanced_map_uses_bybit_events_when_available() -> None:
     assert result.quality.degraded_mode is False
     assert result.quality.event_weight > 0.0
     assert result.quality.events_used == 2
-    assert result.quality.source_age_ms is not None
-    assert result.quality.source_age_ms >= 0
-    assert result.source == "binance_estimate+bybit_events"
+    assert result.source == "binance_model+live_events"
     assert len(result.events) == 2
     assert result.meta["event_count"] == 2.0
+    assert result.events_summary.total_events == 2
+    assert result.events[0].liquidated_side in {Direction.LONG, Direction.SHORT}
+    assert result.heatmap
+    assert result.market_metrics.mark_price == 100.0
 
 
 def test_advanced_map_supports_ws_style_bybit_payload_and_dedupes() -> None:
@@ -153,3 +163,4 @@ def test_advanced_map_supports_ws_style_bybit_payload_and_dedupes() -> None:
     assert len(result.events) == 2
     assert result.quality.events_used == 2
     assert result.meta["event_count"] == 2.0
+    assert result.events[0].symbol == "BTCUSDT"

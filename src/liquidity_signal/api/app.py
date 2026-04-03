@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
+import sys
 from typing import Any
 
 from fastapi import FastAPI, Query
@@ -10,13 +12,25 @@ from fastapi.staticfiles import StaticFiles
 from liquidity_signal.models import (
     BotBacktestResponse,
     CandleResponse,
+    LiquidationEventPoint,
     LiquidationMapAdvancedResponse,
+    LiquidationReplaySnapshot,
+    LiquidationTileResponse,
     SignalExplainResult,
     SignalResult,
 )
 from liquidity_signal.service.engine import SignalEngine
 
-app = FastAPI(title="Liquidity Signal API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if "pytest" not in sys.modules:
+        engine.start_liquidation_watchlist(["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"], interval_seconds=45)
+    yield
+    engine.close()
+
+
+app = FastAPI(title="Liquidity Signal API", version="0.1.0", lifespan=lifespan)
 engine = SignalEngine()
 api_dir = Path(__file__).resolve().parent
 static_dir = api_dir / "static"
@@ -48,10 +62,43 @@ def liquidation_map(
     symbol: str = Query(default="BTCUSDT"),
     include_events: bool = Query(default=True),
     event_limit: int = Query(default=50, ge=1, le=200),
+    range_pct: float = Query(default=10.0, ge=2.0, le=25.0),
+    resolution: int = Query(default=48, ge=16, le=96),
+    history_points: int = Query(default=20, ge=5, le=60),
 ) -> LiquidationMapAdvancedResponse:
     return engine.generate_liquidation_map_advanced(
-        symbol=symbol.upper(), include_events=include_events, event_limit=event_limit
+        symbol=symbol.upper(),
+        include_events=include_events,
+        event_limit=event_limit,
+        range_pct=range_pct,
+        resolution=resolution,
+        history_points=history_points,
     )
+
+
+@app.get("/liquidation/events", response_model=list[LiquidationEventPoint])
+def liquidation_events(
+    symbol: str = Query(default="BTCUSDT"),
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[LiquidationEventPoint]:
+    return engine.generate_liquidation_events(symbol.upper(), limit=limit)
+
+
+@app.get("/liquidation/tiles", response_model=LiquidationTileResponse | None)
+def liquidation_tiles(
+    symbol: str = Query(default="BTCUSDT"),
+    resolution: int = Query(default=48, ge=16, le=96),
+    range_pct: float = Query(default=12.0, ge=2.0, le=25.0),
+) -> LiquidationTileResponse | None:
+    return engine.generate_liquidation_tile(symbol.upper(), resolution=resolution, range_pct=range_pct)
+
+
+@app.get("/liquidation/replay", response_model=list[LiquidationReplaySnapshot])
+def liquidation_replay(
+    symbol: str = Query(default="BTCUSDT"),
+    limit: int = Query(default=20, ge=1, le=200),
+) -> list[LiquidationReplaySnapshot]:
+    return engine.replay_liquidation_map(symbol.upper(), limit=limit)
 
 
 @app.get("/market/candles", response_model=CandleResponse)

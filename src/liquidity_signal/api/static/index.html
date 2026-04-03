@@ -560,14 +560,31 @@
       <section class="panel">
         <h2>Liquidity Map Graph</h2>
         <p>
-          Coinglass-style view: liquidation levels are projected from leverage assumptions and rendered as relative-intensity horizontal bands.
-          Color intensity is comparative, not absolute liquidation size.
+          CoinGlass-style price map: price on the vertical axis, time on the horizontal axis, with color only indicating relative liquidation density.
         </p>
+        <div class="controls" style="padding: 8px;">
+          <select id="liqRangeSelect">
+            <option value="8">Range 8%</option>
+            <option value="12" selected>Range 12%</option>
+            <option value="18">Range 18%</option>
+          </select>
+          <select id="liqResolutionSelect">
+            <option value="24">24 rows</option>
+            <option value="48" selected>48 rows</option>
+            <option value="96">96 rows</option>
+          </select>
+          <select id="liqHistorySelect">
+            <option value="8">8 slices</option>
+            <option value="16" selected>16 slices</option>
+            <option value="24">24 slices</option>
+          </select>
+        </div>
+        <div class="meta" id="liqMeta" style="padding: 0 8px 6px;">Waiting for liquidation surface...</div>
         <div class="legend">
           <span><span class="dot dot-candle"></span>Candles</span>
-          <span><span class="dot dot-above"></span>Levels Above</span>
-          <span><span class="dot dot-below"></span>Levels Below</span>
-          <span><span class="dot dot-cluster"></span>Clusters</span>
+          <span><span class="dot dot-above"></span>Live Liquidations</span>
+          <span><span class="dot dot-below"></span>Depth / Support</span>
+          <span><span class="dot dot-cluster"></span>Stored Heatmap Tiles</span>
         </div>
         <div id="liqChart"></div>
       </section>
@@ -602,6 +619,10 @@
       const pullConfidence = document.getElementById("pullConfidence");
       const methodValue = document.getElementById("methodValue");
       const explainJson = document.getElementById("explainJson");
+      const liqRangeSelect = document.getElementById("liqRangeSelect");
+      const liqResolutionSelect = document.getElementById("liqResolutionSelect");
+      const liqHistorySelect = document.getElementById("liqHistorySelect");
+      const liqMeta = document.getElementById("liqMeta");
       const runBacktestBtn = document.getElementById("runBacktestBtn");
       const stopBacktestBtn = document.getElementById("stopBacktestBtn");
       const resetBacktestBtn = document.getElementById("resetBacktestBtn");
@@ -635,6 +656,10 @@
       let cumulativeTrades = [];
 
       const numFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
+      const compactFmt = new Intl.NumberFormat("en-US", {
+        notation: "compact",
+        maximumFractionDigits: 2
+      });
 
       function setDirectionClass(element, direction) {
         element.classList.remove("direction-long", "direction-short", "direction-flat");
@@ -922,79 +947,56 @@
           .join("");
       }
 
-      function buildHeatmap(candles, liq) {
-        const times = candles.map((c) => new Date(c.open_time));
-        const allPrices = candles.flatMap((c) => [c.high, c.low]);
-        const minP = Math.min(...allPrices) * 0.992;
-        const maxP = Math.max(...allPrices) * 1.008;
-
-        const rows = 110;
-        const yBins = Array.from({ length: rows }, (_, i) => minP + ((maxP - minP) * i) / (rows - 1));
-        const z = yBins.map(() => Array(times.length).fill(0.01));
-
-        const findRow = (price) => {
-          const idx = yBins.findIndex((v) => v >= price);
-          return idx < 0 ? rows - 1 : idx;
-        };
-
-        const paintSegment = (row, thickness, xStart, xEnd, boost) => {
-          const startX = Math.max(0, xStart);
-          const endX = Math.min(times.length - 1, xEnd);
-          const lowY = Math.max(0, row - thickness);
-          const highY = Math.min(rows - 1, row + thickness);
-          for (let x = startX; x <= endX; x++) {
-            for (let y = lowY; y <= highY; y++) {
-              z[y][x] += boost;
-            }
+      function normalizeLiquidityAmounts(rawSlices, openInterestValue) {
+        if (!Array.isArray(rawSlices) || rawSlices.length === 0) return [];
+        const oi = Number(openInterestValue || 0);
+        return rawSlices.map((slice) => {
+          const total = slice.reduce((acc, value) => acc + Number(value || 0), 0);
+          if (total <= 0 || oi <= 0) {
+            return slice.map(() => 0);
           }
+          return slice.map((value) => (Number(value || 0) / total) * oi);
+        });
+      }
+
+      function buildHeatmap(candles, liq, tile) {
+        const sourceTile = tile || {
+          time_axis: liq.heatmap.map((row) => row.timestamp),
+          price_levels: liq.heatmap_price_levels,
+          total_intensity: liq.heatmap.map((row) => row.total_intensity)
         };
 
-        for (const level of liq.levels_above) {
-          const row = findRow(level.level_price);
-          const weight = Math.max(level.strength * 150, 0.12);
-          const span = Math.max(10, Math.round((115 - level.leverage) * 0.8));
-          const start = Math.max(0, times.length - span - (Math.round(level.distance_bps) % 9));
-          paintSegment(row, 1, start, times.length - 1, weight);
-        }
-
-        for (const level of liq.levels_below) {
-          const row = findRow(level.level_price);
-          const weight = Math.max(level.strength * 150, 0.12);
-          const span = Math.max(10, Math.round((115 - level.leverage) * 0.8));
-          const start = Math.max(0, times.length - span - (Math.round(level.distance_bps) % 11));
-          paintSegment(row, 1, start, times.length - 1, weight);
-        }
-
-        for (const cluster of [...liq.clusters_above, ...liq.clusters_below]) {
-          const mid = (cluster.min_price + cluster.max_price) / 2;
-          const row = findRow(mid);
-          const width = Math.max(2, Math.min(4, cluster.contributing_levels + 1));
-          const boost = Math.max(cluster.total_strength * 130, 0.25);
-          const span = Math.max(18, Math.round(times.length * 0.45));
-          const jitter = Math.abs(Math.round(mid * 1000)) % 13;
-          const start = Math.max(0, times.length - span - jitter);
-          paintSegment(row, width, start, times.length - 1, boost);
-        }
+        const x = (sourceTile.time_axis || []).map((ts) => new Date(ts));
+        const yBins = sourceTile.price_levels || [];
+        const rawSlices = sourceTile.total_intensity || [];
+        const amountSlices = normalizeLiquidityAmounts(rawSlices, liq?.market_metrics?.open_interest_value);
+        const z = yBins.map((_, yIdx) => amountSlices.map((row) => row[yIdx] ?? 0));
 
         const heatmap = {
           type: "heatmap",
-          x: times,
+          x,
           y: yBins,
           z,
           colorscale: [
-            [0, "#2a0355"],
-            [0.4, "#4c0b84"],
-            [0.7, "#13b5bf"],
-            [1, "#ebf01a"]
+            [0, "#123c8c"],
+            [0.35, "#1d72c9"],
+            [0.55, "#22c55e"],
+            [0.78, "#84cc16"],
+            [1, "#fde047"]
           ],
-          showscale: false,
-          hovertemplate: "Time: %{x}<br>Price: %{y:.4f}<br>Relative intensity: %{z:.3f}<extra></extra>",
-          opacity: 0.9
+          showscale: true,
+          colorbar: {
+            thickness: 12,
+            tickfont: { color: "#c8ddff" },
+            title: { text: "Est. Liquidity", font: { color: "#c8ddff" } }
+          },
+          hovertemplate: "Time: %{x}<br>Price: %{y:.2f}<br>Est. liquidity: $%{z:,.0f}<extra></extra>",
+          opacity: 0.92
         };
 
         const candleTrace = {
           type: "candlestick",
-          x: times,
+          x: candles.map((c) => new Date(c.open_time)),
           open: candles.map((c) => c.open),
           high: candles.map((c) => c.high),
           low: candles.map((c) => c.low),
@@ -1005,39 +1007,68 @@
           hoverlabel: { bgcolor: "#0f172a" }
         };
 
-        const levelLines = [];
-        for (const level of liq.levels_above) {
-          levelLines.push({
-            type: "line",
-            x0: times[Math.max(0, times.length - 50)],
-            x1: times[times.length - 1],
-            y0: level.level_price,
-            y1: level.level_price,
-            line: { color: "rgba(244,63,94,0.33)", width: 1 }
-          });
-        }
-        for (const level of liq.levels_below) {
-          levelLines.push({
-            type: "line",
-            x0: times[Math.max(0, times.length - 50)],
-            x1: times[times.length - 1],
-            y0: level.level_price,
-            y1: level.level_price,
-            line: { color: "rgba(34,197,94,0.33)", width: 1 }
-          });
-        }
+        const eventMarkers = {
+          type: "scatter",
+          mode: "markers",
+          x: (liq.events || []).map((event) => new Date(event.timestamp)),
+          y: (liq.events || []).map((event) => event.price),
+          text: (liq.events || []).map((event) => `${event.liquidated_side} ${numFmt.format(event.notional || 0)}`),
+          hovertemplate: "Liquidated: %{text}<br>Price: %{y:.2f}<extra></extra>",
+          marker: {
+            size: (liq.events || []).map((event) => Math.max(7, Math.min(18, Math.sqrt(event.notional || 0) / 30))),
+            color: (liq.events || []).map((event) => event.liquidated_side === "LONG" ? "#22c55e" : "#f43f5e"),
+            line: { color: "#f8fafc", width: 0.8 },
+            opacity: 0.82
+          },
+          name: "Events"
+        };
+
+        const depthShapes = (liq.depth_bands || []).map((band) => ({
+          type: "line",
+          x0: x[0],
+          x1: x[x.length - 1],
+          y0: band.price,
+          y1: band.price,
+          line: {
+            color: band.side === "BID" ? "rgba(34,197,94,0.22)" : "rgba(244,63,94,0.22)",
+            width: 1,
+            dash: "dot"
+          }
+        }));
+
+        const levelLines = [...liq.levels_above, ...liq.levels_below].map((level) => ({
+          type: "line",
+          x0: x[Math.max(0, x.length - Math.min(10, x.length))],
+          x1: x[x.length - 1],
+          y0: level.level_price,
+          y1: level.level_price,
+          line: {
+            color: level.side === "SHORT" ? "rgba(244,63,94,0.32)" : "rgba(34,197,94,0.32)",
+            width: 1.2
+          }
+        }));
 
         const layout = {
           paper_bgcolor: "#0b122b",
           plot_bgcolor: "#0b122b",
-          margin: { l: 54, r: 16, t: 12, b: 40 },
-          xaxis: { showgrid: false, color: "#c8ddff" },
-          yaxis: { showgrid: false, color: "#c8ddff", tickformat: ".4f" },
-          shapes: levelLines,
+          margin: { l: 54, r: 40, t: 12, b: 40 },
+          xaxis: {
+            showgrid: false,
+            color: "#c8ddff",
+            title: { text: "Time", font: { color: "#8ca3c7", size: 12 } }
+          },
+          yaxis: {
+            showgrid: false,
+            color: "#c8ddff",
+            tickformat: ",.0f",
+            side: "right",
+            title: { text: "Price", font: { color: "#8ca3c7", size: 12 } }
+          },
+          shapes: [...depthShapes, ...levelLines],
           showlegend: false
         };
 
-        Plotly.newPlot("liqChart", [heatmap, candleTrace], layout, {
+        Plotly.newPlot("liqChart", [heatmap, candleTrace, eventMarkers], layout, {
           responsive: true,
           displayModeBar: false
         });
@@ -1049,10 +1080,14 @@
         refreshMeta.textContent = "Refreshing...";
 
         try {
-          const [signalRes, explainRes, liqRes, candleRes, behaviorRes] = await Promise.all([
+          const liqRange = liqRangeSelect.value;
+          const liqResolution = liqResolutionSelect.value;
+          const liqHistory = liqHistorySelect.value;
+          const [signalRes, explainRes, liqRes, tileRes, candleRes, behaviorRes] = await Promise.all([
             fetch(`/signal?symbol=${symbol}`),
             fetch(`/signal/explain?symbol=${symbol}`),
-            fetch(`/liquidation-map?symbol=${symbol}`),
+            fetch(`/liquidation-map?symbol=${symbol}&range_pct=${liqRange}&resolution=${liqResolution}&history_points=${liqHistory}`),
+            fetch(`/liquidation/tiles?symbol=${symbol}&range_pct=${liqRange}&resolution=${liqResolution}`),
             fetch(`/market/candles?symbol=${symbol}&interval=1m&limit=120`),
             fetch(`/market/behavior?symbol=${symbol}`)
           ]);
@@ -1064,6 +1099,7 @@
           const signal = await signalRes.json();
           const explain = await explainRes.json();
           const liq = await liqRes.json();
+          const tile = tileRes.ok ? await tileRes.json() : null;
           const candleData = await candleRes.json();
           const behavior = behaviorRes.ok ? await behaviorRes.json() : null;
 
@@ -1090,7 +1126,9 @@
 
           explainJson.textContent = JSON.stringify(explain, null, 2);
 
-          buildHeatmap(candleData.candles, liq);
+          buildHeatmap(candleData.candles, liq, tile);
+          const oiValue = Number(liq?.market_metrics?.open_interest_value || 0);
+          liqMeta.textContent = `Price range: ${numFmt.format(liq.price_range_low)} - ${numFmt.format(liq.price_range_high)} | OI distributed across map: $${compactFmt.format(oiValue)} | Colors: blue low, green medium, yellow high`;
 
           const now = new Date();
           refreshMeta.textContent = `Last refresh: ${now.toLocaleString()} | Pair: ${symbol}`;
@@ -1210,6 +1248,9 @@
 
       refreshBtn.addEventListener("click", loadDashboard);
       pairSelect.addEventListener("change", loadDashboard);
+      liqRangeSelect.addEventListener("change", loadDashboard);
+      liqResolutionSelect.addEventListener("change", loadDashboard);
+      liqHistorySelect.addEventListener("change", loadDashboard);
       runBacktestBtn.addEventListener("click", runBacktest);
       stopBacktestBtn.addEventListener("click", () => {
         if (backtestAbortController) {

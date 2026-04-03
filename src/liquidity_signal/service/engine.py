@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
+import threading
+import time
 from typing import Any
 
 from liquidity_signal.config import SignalConfig
 from liquidity_signal.data.binance_client import BinanceFuturesClient
 from liquidity_signal.data.bybit_client import BybitPublicClient
-from liquidity_signal.features.liquidation_map import build_liquidation_map_advanced, build_liquidation_map_estimate
+from liquidity_signal.features.liquidation_map import (
+    build_liquidation_map_advanced,
+    build_liquidation_map_estimate,
+    build_multi_resolution_tiles,
+)
 from liquidity_signal.features.liquidity_features import build_liquidity_features
 from liquidity_signal.features.mtf_regime import MTFRegimeAnalyzer, MarketRegime
 from liquidity_signal.models import (
@@ -16,11 +22,16 @@ from liquidity_signal.models import (
     CandleResponse,
     Direction,
     EquityPoint,
+    LiquidationEventPoint,
+    LiquidationReplaySnapshot,
+    LiquidationTileResponse,
     LiquidationMapAdvancedResponse,
     SignalExplainResult,
     SignalResult,
 )
 from liquidity_signal.risk.tpsl import compute_tp_sl, compute_tp_sl_with_breakdown
+from liquidity_signal.service.liquidation_runtime import LiquidationRuntime
+from liquidity_signal.service.liquidation_store import LiquidationStore
 from liquidity_signal.signal.ai_refiner import refine_signal_with_ai
 from liquidity_signal.signal.scorer import score_features_with_breakdown
 
@@ -31,14 +42,55 @@ class SignalEngine:
         client: BinanceFuturesClient | None = None,
         cfg: SignalConfig | None = None,
         bybit_client: BybitPublicClient | None = None,
+        liquidation_store: LiquidationStore | None = None,
+        liquidation_runtime: LiquidationRuntime | None = None,
     ) -> None:
         self.client = client or BinanceFuturesClient()
         self.cfg = cfg or SignalConfig()
         self.bybit_client = bybit_client or BybitPublicClient()
+        self.liquidation_store = liquidation_store or LiquidationStore()
+        self.liquidation_runtime = liquidation_runtime or LiquidationRuntime(store=self.liquidation_store)
+        self._watchlist_thread: threading.Thread | None = None
+        self._watchlist_stop = threading.Event()
 
     def close(self) -> None:
         self.client.close()
         self.bybit_client.close()
+        self.liquidation_runtime.close()
+        self._watchlist_stop.set()
+        if self._watchlist_thread and self._watchlist_thread.is_alive():
+            self._watchlist_thread.join(timeout=1.0)
+        self.liquidation_store.close()
+
+    def start_liquidation_watchlist(self, symbols: list[str], interval_seconds: int = 60) -> None:
+        normalized = [symbol.upper() for symbol in symbols]
+        for symbol in normalized:
+            self.liquidation_runtime.ensure_symbol(symbol)
+
+        if self._watchlist_thread and self._watchlist_thread.is_alive():
+            return
+
+        def _loop() -> None:
+            while not self._watchlist_stop.is_set():
+                for symbol in normalized:
+                    if self._watchlist_stop.is_set():
+                        break
+                    try:
+                        self.generate_liquidation_map_advanced(
+                            symbol=symbol,
+                            include_events=True,
+                            event_limit=100,
+                            range_pct=12.0,
+                            resolution=48,
+                            history_points=20,
+                        )
+                    except Exception:
+                        continue
+                self._watchlist_stop.wait(interval_seconds)
+
+        self._watchlist_stop.clear()
+        self._watchlist_thread = threading.Thread(target=_loop, daemon=True, name="liquidation-watchlist")
+        self._watchlist_thread.start()
 
     def _apply_liquidation_overlay(
         self,
@@ -149,42 +201,153 @@ class SignalEngine:
         symbol: str = "BTCUSDT",
         include_events: bool = True,
         event_limit: int = 50,
+        range_pct: float = 10.0,
+        resolution: int = 48,
+        history_points: int = 20,
     ) -> LiquidationMapAdvancedResponse:
-        mark_price = self.client.get_mark_price(symbol)
-        oi_hist = self.client.get_open_interest_hist(symbol, period="5m", limit=30)
-        klines = self.client.get_recent_klines(symbol, interval="1m", limit=60)
+        mark_info = self.client.get_mark_price_info(symbol)
+        mark_price = float(mark_info["markPrice"])
+        order_book = self.client.get_order_book(symbol, limit=100)
+        oi_hist = self.client.get_open_interest_hist(symbol, period="5m", limit=60)
+        klines = self.client.get_recent_klines(symbol, interval="1m", limit=120)
         try:
             funding_rates = self.client.get_funding_rates(symbol, limit=30)
         except Exception:
             funding_rates = []
 
-        bybit_events: list[dict[str, Any]] | None = None
-        bybit_fetched_at_ms: int | None = None
+        try:
+            basis_rows = self.client.get_basis(symbol, period="5m", limit=30)
+        except Exception:
+            basis_rows = []
+        try:
+            taker_volume_rows = self.client.get_taker_buy_sell_volume(symbol, period="5m", limit=30)
+        except Exception:
+            taker_volume_rows = []
+        try:
+            global_ratio_rows = self.client.get_global_long_short_account_ratio(symbol, period="5m", limit=30)
+        except Exception:
+            global_ratio_rows = []
+        try:
+            top_account_ratio_rows = self.client.get_top_long_short_account_ratio(symbol, period="5m", limit=30)
+        except Exception:
+            top_account_ratio_rows = []
+        try:
+            top_position_ratio_rows = self.client.get_top_long_short_position_ratio(symbol, period="5m", limit=30)
+        except Exception:
+            top_position_ratio_rows = []
+
+        live_events: list[LiquidationEventPoint] = []
+        stream_health = []
         degraded_reason: str | None = None
         if include_events:
             try:
-                if hasattr(self.bybit_client, "get_recent_liquidations_with_meta"):
-                    bybit_events, bybit_fetched_at_ms, degraded_reason = self.bybit_client.get_recent_liquidations_with_meta(
-                        symbol=symbol, limit=event_limit
-                    )
-                else:
-                    bybit_events = self.bybit_client.get_recent_liquidations(symbol=symbol, limit=event_limit)
-                    bybit_fetched_at_ms = int(datetime.now().timestamp() * 1000)
+                self.liquidation_runtime.ensure_symbol(symbol)
+                live_events = self.liquidation_runtime.get_recent_events(symbol=symbol, limit=event_limit)
+                stream_health = self.liquidation_runtime.get_stream_health(symbol=symbol)
             except Exception as exc:
-                bybit_events = None
-                degraded_reason = f"Bybit fetch exception: {exc}"
+                degraded_reason = f"Liquidation stream runtime exception: {exc}"
 
-        return build_liquidation_map_advanced(
+        now_ms = int(time.time() * 1000)
+        calibration = self.liquidation_store.calibration_profile(symbol)
+        storage_stats = {
+            "persistent_event_count_1h": self.liquidation_store.count_events_since(symbol, now_ms - 60 * 60 * 1000),
+            "persistent_event_count_24h": self.liquidation_store.count_events_since(symbol, now_ms - 24 * 60 * 60 * 1000),
+            "replay_snapshots_available": len(self.liquidation_store.replay_snapshots(symbol, limit=200)),
+            "tile_resolutions_available": [24, 48, 96],
+        }
+
+        response = build_liquidation_map_advanced(
             symbol=symbol,
             mark_price=mark_price,
             oi_hist=oi_hist,
             klines=klines,
             funding_rates=funding_rates,
-            bybit_events_raw=bybit_events,
+            basis_rows=basis_rows,
+            taker_volume_rows=taker_volume_rows,
+            global_ratio_rows=global_ratio_rows,
+            top_account_ratio_rows=top_account_ratio_rows,
+            top_position_ratio_rows=top_position_ratio_rows,
+            order_book=order_book,
+            mark_price_info=mark_info,
+            live_events=live_events,
             include_events=include_events,
-            bybit_fetched_at_ms=bybit_fetched_at_ms,
             degraded_reason=degraded_reason,
+            stream_health=stream_health,
+            calibration=calibration,
+            storage_stats=storage_stats,
+            range_pct=range_pct,
+            resolution=resolution,
+            history_points=history_points,
         )
+        payload = response.model_dump(mode="json")
+        self.liquidation_store.persist_snapshot(
+            symbol=symbol,
+            generated_at=response.generated_at,
+            source=response.source,
+            range_pct=range_pct,
+            resolution=resolution,
+            payload=payload,
+        )
+        for tile in build_multi_resolution_tiles(
+            symbol=symbol,
+            generated_at=response.generated_at,
+            range_pct=range_pct,
+            price_levels=response.heatmap_price_levels,
+            heatmap=response.heatmap,
+            resolutions=[24, 48, 96, resolution],
+        ):
+            self.liquidation_store.persist_tile(
+                symbol=symbol,
+                generated_at=response.generated_at,
+                range_pct=range_pct,
+                resolution=tile["resolution"],
+                tile=tile,
+            )
+        return response
+
+    def generate_liquidation_events(self, symbol: str = "BTCUSDT", limit: int = 50) -> list[LiquidationEventPoint]:
+        self.liquidation_runtime.ensure_symbol(symbol)
+        live = self.liquidation_runtime.get_recent_events(symbol=symbol, limit=limit)
+        if live:
+            return live
+        return self.liquidation_store.load_recent_events(symbol=symbol, limit=limit)
+
+    def generate_liquidation_tile(
+        self,
+        symbol: str = "BTCUSDT",
+        resolution: int = 48,
+        range_pct: float = 12.0,
+    ) -> LiquidationTileResponse | None:
+        tile = self.liquidation_store.get_latest_tile(symbol=symbol, resolution=resolution, range_pct=range_pct)
+        if tile is None:
+            self.generate_liquidation_map_advanced(
+                symbol=symbol,
+                include_events=True,
+                event_limit=100,
+                range_pct=range_pct,
+                resolution=resolution,
+                history_points=20,
+            )
+            tile = self.liquidation_store.get_latest_tile(symbol=symbol, resolution=resolution, range_pct=range_pct)
+        return LiquidationTileResponse.model_validate(tile) if tile else None
+
+    def replay_liquidation_map(self, symbol: str = "BTCUSDT", limit: int = 20) -> list[LiquidationReplaySnapshot]:
+        snapshots = self.liquidation_store.replay_snapshots(symbol=symbol, limit=limit)
+        rows: list[LiquidationReplaySnapshot] = []
+        for payload in snapshots:
+            rows.append(
+                LiquidationReplaySnapshot(
+                    symbol=payload["symbol"],
+                    generated_at=payload["generated_at"],
+                    current_price=payload["current_price"],
+                    dominant_pull=payload["dominant_pull"],
+                    confidence=payload["confidence"],
+                    source=payload["source"],
+                    price_range_low=payload["price_range_low"],
+                    price_range_high=payload["price_range_high"],
+                )
+            )
+        return rows
 
     def generate_candles(self, symbol: str = "BTCUSDT", interval: str = "1m", limit: int = 120) -> CandleResponse:
         rows = self.client.get_recent_klines(symbol, interval=interval, limit=limit)

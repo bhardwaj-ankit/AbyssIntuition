@@ -151,6 +151,9 @@ class LiquidationAssumptions(BaseModel):
     leverage_weights: dict[int, float]
     maintenance_margin_rate: float
     cluster_step_bps: float
+    range_pct: float
+    heatmap_resolution: int
+    entry_cohort_bins: int
     open_interest_change_pct: float
     price_return_pct: float
     funding_rate_bps: float
@@ -175,10 +178,103 @@ class LiquidationMapResponse(BaseModel):
 
 class LiquidationEventPoint(BaseModel):
     source: str
-    side: Direction
+    symbol: str
+    liquidated_side: Direction
+    execution_side: str
     price: float
     quantity: float
+    notional: float
     timestamp: int
+    received_at: int | None = Field(default=None, ge=0)
+    exchange_event_id: str | None = None
+
+
+class LiquidationStreamHealth(BaseModel):
+    source: str
+    symbol: str
+    connected: bool
+    last_message_ts: int | None = Field(default=None, ge=0)
+    last_event_ts: int | None = Field(default=None, ge=0)
+    events_buffered: int = Field(ge=0)
+    reconnects: int = Field(ge=0)
+    last_error: str | None = None
+
+
+class LiquidationHeatmapSlice(BaseModel):
+    timestamp: int
+    current_price: float
+    total_intensity: List[float]
+    long_liquidation_intensity: List[float]
+    short_liquidation_intensity: List[float]
+
+
+class LiquidationDepthBand(BaseModel):
+    side: str
+    price: float
+    cumulative_notional: float = Field(ge=0.0)
+    distance_bps: float
+
+
+class LiquidationMarketMetrics(BaseModel):
+    mark_price: float
+    index_price: float
+    basis_bps: float
+    last_funding_rate_bps: float
+    open_interest_value: float
+    open_interest_change_pct: float
+    taker_buy_sell_ratio: float
+    global_long_short_ratio: float
+    top_trader_account_ratio: float
+    top_trader_position_ratio: float
+    order_book_imbalance: float
+    recent_volume: float
+    realized_volatility_bps: float
+    next_funding_time: int | None = Field(default=None, ge=0)
+
+
+class LiquidationEventsSummary(BaseModel):
+    total_events: int = Field(ge=0)
+    total_notional: float = Field(ge=0.0)
+    long_liquidation_notional: float = Field(ge=0.0)
+    short_liquidation_notional: float = Field(ge=0.0)
+    latest_event_ts: int | None = Field(default=None, ge=0)
+
+
+class LiquidationCalibrationProfile(BaseModel):
+    intensity_multiplier: float = Field(ge=0.0)
+    long_bias_multiplier: float = Field(ge=0.0)
+    short_bias_multiplier: float = Field(ge=0.0)
+    historical_event_count: float = Field(ge=0.0)
+
+
+class LiquidationStorageStats(BaseModel):
+    persistent_event_count_1h: int = Field(ge=0)
+    persistent_event_count_24h: int = Field(ge=0)
+    replay_snapshots_available: int = Field(ge=0)
+    tile_resolutions_available: List[int] = Field(default_factory=list)
+
+
+class LiquidationTileResponse(BaseModel):
+    symbol: str
+    generated_at: int
+    range_pct: float
+    resolution: int
+    time_axis: List[int]
+    price_levels: List[float]
+    total_intensity: List[List[float]]
+    long_intensity: List[List[float]]
+    short_intensity: List[List[float]]
+
+
+class LiquidationReplaySnapshot(BaseModel):
+    symbol: str
+    generated_at: int
+    current_price: float
+    dominant_pull: Direction
+    confidence: float = Field(ge=0.0, le=1.0)
+    source: str
+    price_range_low: float
+    price_range_high: float
 
 
 class LiquidationDataQuality(BaseModel):
@@ -190,6 +286,7 @@ class LiquidationDataQuality(BaseModel):
     degraded_mode: bool
     source_age_ms: int | None = Field(default=None, ge=0)
     degraded_reason: str | None = None
+    stream_health: List[LiquidationStreamHealth] = Field(default_factory=list)
     notes: List[str]
 
 
@@ -201,12 +298,21 @@ class LiquidationMapAdvancedResponse(BaseModel):
     methodology: str
     source: str
     generated_at: int
+    price_range_low: float
+    price_range_high: float
     levels_above: List[LiquidationLevel]
     levels_below: List[LiquidationLevel]
     clusters_above: List[LiquidationCluster]
     clusters_below: List[LiquidationCluster]
+    heatmap_price_levels: List[float]
+    heatmap: List[LiquidationHeatmapSlice]
+    depth_bands: List[LiquidationDepthBand]
+    market_metrics: LiquidationMarketMetrics
     assumptions: LiquidationAssumptions
+    calibration: LiquidationCalibrationProfile
     quality: LiquidationDataQuality
+    events_summary: LiquidationEventsSummary
+    storage: LiquidationStorageStats
     events: List[LiquidationEventPoint]
     meta: dict[str, float]
 
