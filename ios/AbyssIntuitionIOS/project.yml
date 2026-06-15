@@ -1,0 +1,39 @@
+name: AbyssIntuitionIOS
+options:
+  minimumXcodeGenVersion: 2.38.0
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    IPHONEOS_DEPLOYMENT_TARGET: 18.0
+    DEVELOPMENT_TEAM: ""
+targets:
+  AbyssIntuitionIOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: App
+      - path: Models
+      - path: Networking
+      - path: Store
+      - path: ViewModels
+      - path: Views
+      - path: Resources
+    settings:
+      base:
+        PRODUCT_NAME: AbyssIntuitionIOS
+        PRODUCT_BUNDLE_IDENTIFIER: com.abyssintuition.ios
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.0
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        CODE_SIGN_STYLE: Automatic
+    scheme:
+      testTargets: []

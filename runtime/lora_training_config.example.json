@@ -1,0 +1,36 @@
+{
+  "base_model": "Qwen/Qwen2.5-3B-Instruct",
+  "task": "crypto_direction_classification",
+  "symbol": "BTCUSDT",
+  "horizon_minutes": 15,
+  "dataset_path": "runtime/lora_exports/btcusdt_15m_undersample_majority_chatml.jsonl",
+  "output_dir": "runtime/lora_runs/qwen25-3b-btcusdt-15m",
+  "max_seq_length": 2048,
+  "learning_rate": 0.0002,
+  "epochs": 3,
+  "micro_batch_size": 2,
+  "gradient_accumulation_steps": 8,
+  "lora_r": 16,
+  "lora_alpha": 32,
+  "lora_dropout": 0.05,
+  "balance_mode": "undersample_majority",
+  "class_weights": {
+    "LONG": 1.0,
+    "SHORT": 1.0,
+    "FLAT": 1.0
+  },
+  "target_modules": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj"
+  ],
+  "notes": [
+    "Train on structured snapshots and resolved labels only.",
+    "Do not train directly on raw candle arrays as the sole input.",
+    "Keep deterministic risk, execution, and barrier logic outside the model."
+  ]
+}

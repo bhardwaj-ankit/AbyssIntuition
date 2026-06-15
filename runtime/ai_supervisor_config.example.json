@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "provider": "OPENAI",
+  "api_key": "paste_your_openai_api_key_here",
+  "base_url": "https://api.openai.com/v1",
+  "model": "gpt-4o-mini",
+  "timeout_seconds": 8.0,
+  "max_output_tokens": 300,
+  "temperature": 0.2
+}

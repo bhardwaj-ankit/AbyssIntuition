@@ -1,0 +1,22 @@
+{
+  "api_key": "paste_your_bybit_demo_api_key_here",
+  "api_secret": "paste_your_bybit_demo_api_secret_here",
+  "base_url": "https://api-demo.bybit.com",
+  "category": "linear",
+  "account_type": "UNIFIED",
+  "recv_window": 5000,
+  "default_symbol": "BTCUSDT",
+  "default_poll_interval_seconds": 5,
+  "default_leverage": 2.0,
+  "default_risk_per_trade_pct": 0.01,
+  "default_max_margin_fraction": 0.35,
+  "default_cooldown_seconds": 30,
+  "default_mode": "BALANCED",
+  "breakout_min_confidence": 0.70,
+  "breakout_min_volume_ratio": 1.15,
+  "breakout_max_failure_rate": 0.35,
+  "target_liquidation_move_pct": 90.0,
+  "opposite_move_close_r": 0.90,
+  "live_flip_min_confidence": 0.62,
+  "live_flip_min_agreement_ratio": 0.55
+}

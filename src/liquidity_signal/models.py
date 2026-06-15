@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List
+from typing import Any, List
 
 from pydantic import BaseModel, Field
 
@@ -18,8 +18,23 @@ class LiquidityFeatures(BaseModel):
     spread_bps: float
     imbalance_l1: float
     imbalance_l5: float
+    imbalance_l10: float = 0.0
+    weighted_depth_imbalance: float = 0.0
     buy_flow_ratio: float
     short_volatility_bps: float
+    micro_momentum_bps: float = 0.0
+    intraday_momentum_bps: float = 0.0
+    volume_zscore: float = 0.0
+    liquidity_gap_bps: float = 0.0
+    funding_rate_bps: float = 0.0
+    basis_bps: float = 0.0
+    open_interest_change_pct: float = 0.0
+    taker_buy_sell_ratio: float = 1.0
+    global_long_short_ratio: float = 1.0
+    top_trader_account_ratio: float = 1.0
+    top_trader_position_ratio: float = 1.0
+    htf_bias: float = Field(default=0.0, ge=-1.0, le=1.0)
+    htf_regime: str = "BALANCED"
 
 
 class SignalResult(BaseModel):
@@ -30,6 +45,13 @@ class SignalResult(BaseModel):
     tp: float
     sl: float
     reasons: List[str]
+    horizon: str = "5m"
+    decision_ts: int | None = Field(default=None, ge=0)
+    expires_at: int | None = Field(default=None, ge=0)
+    entry_assumption: str = "mark"
+    model_version: str = "signal-v0.2.0"
+    feature_version: str = "features-v0.2.0"
+    signal_quality: str = "STANDARD"
 
 
 class AIRefinementBreakdown(BaseModel):
@@ -49,7 +71,18 @@ class ScoringBreakdown(BaseModel):
     max_spread_bps: float
     imbalance_l1_weighted: float
     imbalance_l5_weighted: float
+    imbalance_l10_weighted: float
+    weighted_depth_weighted: float
     flow_weighted: float
+    microstructure_score: float
+    momentum_score: float
+    regime_score: float
+    positioning_score: float
+    sentiment_score: float
+    alignment_bonus: float
+    conflict_penalty: float
+    execution_penalty: float
+    crowding_penalty: float
     raw_score: float
     confidence: float = Field(ge=0.0, le=1.0)
     long_threshold: float
@@ -75,6 +108,13 @@ class SignalExplainResult(BaseModel):
     ai_refinement: AIRefinementBreakdown | None = None
 
 
+class SignalApiResponse(BaseModel):
+    symbol: str
+    signal: SignalResult
+    explain: SignalExplainResult
+    cumulative: "CumulativeSignalResponse"
+
+
 class Candle(BaseModel):
     open_time: int
     open: float
@@ -90,7 +130,20 @@ class CandleResponse(BaseModel):
     candles: List[Candle]
 
 
+class MarketSymbol(BaseModel):
+    symbol: str
+    base_asset: str
+    quote_asset: str
+    status: str
+    contract_type: str
+
+
+class MarketSymbolsResponse(BaseModel):
+    symbols: List[MarketSymbol]
+
+
 class BotTrade(BaseModel):
+    run_id: str | None = None
     side: Direction
     entry_time: int
     exit_time: int
@@ -105,6 +158,13 @@ class BotTrade(BaseModel):
     fee_paid: float
     funding_paid: float
     net_pnl: float
+    entry_reason: str = ""
+    exit_reason: str = ""
+    entry_signal_direction: Direction = Direction.FLAT
+    entry_signal_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    entry_signal_quality: str = "UNKNOWN"
+    signal_horizon: str = "N/A"
+    signal_source: str = "adaptive_backtest_strategy"
     reason: str
 
 
@@ -114,6 +174,7 @@ class EquityPoint(BaseModel):
 
 
 class BotBacktestResponse(BaseModel):
+    run_id: str | None = None
     symbol: str
     interval: str
     initial_capital: float
@@ -124,9 +185,294 @@ class BotBacktestResponse(BaseModel):
     fees_paid: float
     funding_paid: float
     max_drawdown_pct: float
+    signal_source: str = "adaptive_backtest_strategy"
     trades: List[BotTrade]
     trade_logs: List[str]
     equity_curve: List[EquityPoint]
+
+
+class PaperBotPosition(BaseModel):
+    side: Direction
+    entry_time: int
+    entry_time_local: str
+    entry_price: float
+    qty: float
+    leverage: float = 1.0
+    tp_price: float
+    sl_price: float
+    liquidation_price: float | None = None
+    entry_reason: str = ""
+    entry_signal_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    entry_signal_quality: str = "UNKNOWN"
+    signal_horizon: str = "N/A"
+    signal_source: str = "signal_api_live_regime_bot"
+    current_price: float
+    unrealized_pnl: float = 0.0
+    unrealized_roi_pct: float = 0.0
+
+
+class PaperBotStatus(BaseModel):
+    session_id: str | None = None
+    symbol: str
+    running: bool
+    started_at: int | None = Field(default=None, ge=0)
+    scheduled_end_at: int | None = Field(default=None, ge=0)
+    stopped_at: int | None = Field(default=None, ge=0)
+    poll_interval_seconds: int = Field(default=60, ge=5)
+    mode: str = "BALANCED"
+    leverage: float = 1.0
+    initial_capital: float
+    current_capital: float
+    realized_pnl: float
+    unrealized_pnl: float = 0.0
+    fees_paid: float = 0.0
+    total_trades: int = 0
+    win_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    signal_source: str = "signal_api_live_regime_bot"
+    open_position: PaperBotPosition | None = None
+    last_signal: SignalResult | None = None
+    last_action: str = "idle"
+    last_updated_at: int | None = Field(default=None, ge=0)
+    recent_trades: List[BotTrade] = Field(default_factory=list)
+
+
+class DemoBotPosition(BaseModel):
+    symbol: str
+    side: Direction
+    size: float
+    entry_price: float
+    mark_price: float
+    leverage: float = 1.0
+    take_profit: float | None = None
+    stop_loss: float | None = None
+    liquidation_price: float | None = None
+    liquidation_buffer_pct: float | None = None
+    position_value: float = 0.0
+    unrealized_pnl: float = 0.0
+    unrealized_roi_pct: float = 0.0
+    order_link_id: str | None = None
+    opened_at: int | None = Field(default=None, ge=0)
+
+
+class AITradeDecision(BaseModel):
+    enabled: bool = False
+    source: str = "OPENAI"
+    model: str | None = None
+    review_type: str = "entry"
+    entry_verdict: str = "SKIPPED"
+    size_multiplier: float = Field(default=1.0, ge=0.0, le=1.0)
+    confidence_adjustment: float = Field(default=0.0, ge=-0.2, le=0.2)
+    exit_action: str = "HOLD"
+    stop_adjustment_pct: float = Field(default=0.0, ge=-0.2, le=0.2)
+    take_profit_adjustment_pct: float = Field(default=0.0, ge=-0.2, le=0.2)
+    reason: str = ""
+    risk_flags: List[str] = Field(default_factory=list)
+    reviewed_at: int | None = Field(default=None, ge=0)
+
+
+class AISupervisorConfigStatus(BaseModel):
+    enabled: bool
+    configured: bool
+    active: bool
+    provider: str = "OPENAI"
+    model: str
+    config_path: str
+    config_source: str = "defaults"
+    message: str
+
+
+class DemoBotStatus(BaseModel):
+    session_id: str | None = None
+    symbol: str
+    running: bool
+    exchange: str = "BYBIT"
+    environment: str = "DEMO"
+    started_at: int | None = Field(default=None, ge=0)
+    stopped_at: int | None = Field(default=None, ge=0)
+    poll_interval_seconds: int = Field(default=30, ge=5)
+    mode: str = "BALANCED"
+    leverage: float = 1.0
+    risk_per_trade_pct: float = Field(default=0.01, ge=0.0, le=0.1)
+    max_margin_fraction: float = Field(default=0.35, ge=0.0, le=1.0)
+    cooldown_seconds: int = Field(default=180, ge=0)
+    cooldown_until: int | None = Field(default=None, ge=0)
+    account_equity: float = 0.0
+    wallet_balance: float = 0.0
+    available_balance: float = 0.0
+    total_trades: int = 0
+    signal_source: str = "bybit_demo_live_bot"
+    ai_enabled: bool = False
+    ai_model: str | None = None
+    ai_last_decision: AITradeDecision | None = None
+    open_position: DemoBotPosition | None = None
+    last_signal: SignalResult | None = None
+    last_action: str = "idle"
+    last_error: str | None = None
+    last_updated_at: int | None = Field(default=None, ge=0)
+    recent_trades: List[BotTrade] = Field(default_factory=list)
+
+
+class DemoBotConfigStatus(BaseModel):
+    configured: bool
+    config_path: str
+    config_source: str = "defaults"
+    base_url: str
+    category: str
+    account_type: str
+    default_symbol: str
+    ai_enabled: bool = False
+    ai_configured: bool = False
+    ai_model: str | None = None
+    ai_message: str = ""
+    message: str
+
+
+class DemoBotPerformanceSummary(BaseModel):
+    total_trades: int = 0
+    win_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    net_pnl: float = 0.0
+    gross_profit: float = 0.0
+    gross_loss: float = 0.0
+    profit_factor: float | None = None
+    avg_roi_pct: float = 0.0
+    best_trade_pnl: float = 0.0
+    worst_trade_pnl: float = 0.0
+    total_fees: float = 0.0
+    total_funding: float = 0.0
+    last_trade_at: int | None = Field(default=None, ge=0)
+
+
+class DemoBotPerformanceResponse(BaseModel):
+    symbol: str
+    exchange: str = "BYBIT"
+    environment: str = "DEMO"
+    lookback_trades: int = 50
+    summary: DemoBotPerformanceSummary
+    trades: List[BotTrade] = Field(default_factory=list)
+
+
+class TrainingSnapshotRecord(BaseModel):
+    snapshot_id: str
+    symbol: str
+    event_ts: int = Field(ge=0)
+    exchange: str
+    environment: str
+    mark_price: float
+    signal_direction: Direction
+    signal_confidence: float = Field(ge=0.0, le=1.0)
+    signal_quality: str = "STANDARD"
+    decision_action: str
+    took_trade: bool = False
+    raw_payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class TrainingSnapshotLabel(BaseModel):
+    snapshot_id: str
+    symbol: str
+    event_ts: int = Field(ge=0)
+    horizon_minutes: int = Field(ge=1)
+    status: str = "PENDING"
+    label_action: Direction = Direction.FLAT
+    expires_at: int = Field(ge=0)
+    resolved_at: int | None = Field(default=None, ge=0)
+    upper_barrier_price: float
+    lower_barrier_price: float
+    terminal_price: float | None = None
+    max_up_pct: float = 0.0
+    max_down_pct: float = 0.0
+    raw_payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class TrainingDatasetSummary(BaseModel):
+    symbol: str
+    total_snapshots: int = 0
+    total_decisions: int = 0
+    total_labels: int = 0
+    resolved_labels: int = 0
+    pending_labels: int = 0
+    long_labels: int = 0
+    short_labels: int = 0
+    flat_labels: int = 0
+
+
+class TrainingDatasetResponse(BaseModel):
+    symbol: str
+    summary: TrainingDatasetSummary
+    snapshots: List[TrainingSnapshotRecord] = Field(default_factory=list)
+    labels: List[TrainingSnapshotLabel] = Field(default_factory=list)
+
+
+class LoraTrainingExample(BaseModel):
+    snapshot_id: str
+    symbol: str
+    horizon_minutes: int = Field(ge=1)
+    label_action: Direction
+    decision_action: str
+    took_trade: bool = False
+    split: str = "train"
+    prompt: str
+    completion: str
+    messages: List[dict[str, str]] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class LoraTrainingExportSummary(BaseModel):
+    symbol: str
+    total_examples: int = 0
+    horizon_minutes: int = 15
+    balance_mode: str = "none"
+    raw_examples: int = 0
+    raw_long_examples: int = 0
+    raw_short_examples: int = 0
+    raw_flat_examples: int = 0
+    long_examples: int = 0
+    short_examples: int = 0
+    flat_examples: int = 0
+    train_examples: int = 0
+    validation_examples: int = 0
+    test_examples: int = 0
+    class_weights: dict[str, float] = Field(default_factory=dict)
+
+
+class LoraTrainingExportResponse(BaseModel):
+    symbol: str
+    horizon_minutes: int = 15
+    summary: LoraTrainingExportSummary
+    examples: List[LoraTrainingExample] = Field(default_factory=list)
+
+
+class HistoricalTrainingBackfillResponse(BaseModel):
+    symbol: str
+    lookback_hours: int = Field(ge=1)
+    step_minutes: int = Field(ge=1)
+    samples_attempted: int = Field(ge=0)
+    snapshots_created: int = Field(ge=0)
+    resolved_labels: int = Field(ge=0)
+    skipped_samples: int = Field(ge=0)
+    used_liquidation_snapshots: int = Field(ge=0)
+    notes: List[str] = Field(default_factory=list)
+
+
+class HistoricalTrainingBackfillBatchItem(BaseModel):
+    symbol: str
+    samples_attempted: int = Field(ge=0)
+    snapshots_created: int = Field(ge=0)
+    resolved_labels: int = Field(ge=0)
+    skipped_samples: int = Field(ge=0)
+    used_liquidation_snapshots: int = Field(ge=0)
+    notes: List[str] = Field(default_factory=list)
+
+
+class HistoricalTrainingBackfillBatchResponse(BaseModel):
+    symbols: List[str] = Field(default_factory=list)
+    lookback_hours: int = Field(ge=1)
+    step_minutes: int = Field(ge=1)
+    total_samples_attempted: int = Field(ge=0)
+    total_snapshots_created: int = Field(ge=0)
+    total_resolved_labels: int = Field(ge=0)
+    total_skipped_samples: int = Field(ge=0)
+    total_used_liquidation_snapshots: int = Field(ge=0)
+    items: List[HistoricalTrainingBackfillBatchItem] = Field(default_factory=list)
 
 
 class LiquidationLevel(BaseModel):
@@ -328,3 +674,49 @@ class MarketBehavior(BaseModel):
     duration_candles: int | None = None
     supporting_stats: dict[str, float] = Field(default_factory=dict)
     timestamp: int  # Unix timestamp
+
+
+class CumulativeSignalTimeframe(BaseModel):
+    timeframe: str
+    market_mode: str = "TRANSITIONAL"
+    regime_strength: float = Field(default=0.0, ge=0.0, le=1.0)
+    direction: Direction
+    confidence: float = Field(ge=0.0, le=1.0)
+    signal_quality: str = "STANDARD"
+    score: float
+    max_score: float
+    close: float
+    ema20: float
+    ema50: float
+    ema200: float
+    vwap: float
+    rsi14: float | None = None
+    macd: float
+    macd_signal: float
+    macd_histogram: float
+    adx14: float | None = None
+    atr_pct: float = 0.0
+    atr_state: str = "NEUTRAL"
+    breakout_failure_rate: float = 0.0
+    volume_ratio: float
+    pattern: str = "Mixed Structure"
+    nearest_support: float | None = None
+    nearest_resistance: float | None = None
+    reasons: List[str] = Field(default_factory=list)
+
+
+class CumulativeSignalResponse(BaseModel):
+    symbol: str
+    generated_at: int
+    market_mode: str = "TRANSITIONAL"
+    strategy_mode: str = "STAY_FLAT"
+    aggregate_direction: Direction
+    aggregate_confidence: float = Field(ge=0.0, le=1.0)
+    agreement_ratio: float = Field(ge=0.0, le=1.0)
+    signal_quality: str = "STANDARD"
+    reasons: List[str] = Field(default_factory=list)
+    bot_signal: SignalResult
+    timeframes: List[CumulativeSignalTimeframe] = Field(default_factory=list)
+
+
+SignalApiResponse.model_rebuild()

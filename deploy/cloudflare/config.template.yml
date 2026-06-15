@@ -1,0 +1,9 @@
+tunnel: REPLACE_TUNNEL_ID
+credentials-file: /Users/ankitbhardwaj/.cloudflared/REPLACE_TUNNEL_ID.json
+
+ingress:
+  - hostname: REPLACE_HOSTNAME
+    service: http://127.0.0.1
+    originRequest:
+      noTLSVerify: true
+  - service: http_status:404

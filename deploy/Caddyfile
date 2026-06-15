@@ -1,0 +1,8 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN:localhost}, :80 {
+	encode zstd gzip
+	reverse_proxy app:8000
+}

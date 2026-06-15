@@ -27,6 +27,8 @@ wheels/
 # IDE
 .vscode/
 .idea/
+.xcuserdata/
+*.xcuserstate
 *.swp
 *.swo
 *~
@@ -44,6 +46,9 @@ logs/
 # Environment
 .env
 .env.local
+.env.docker
+runtime/bybit_demo_config.json
+runtime/ai_supervisor_config.json
 
 # Temp
 .commit_marker_*

@@ -30,6 +30,8 @@ def test_liquidation_map_default_route_uses_advanced_model(monkeypatch) -> None:
         range_pct: float,
         resolution: int,
         history_points: int,
+        candle_interval: str = "5m",
+        candle_limit: int = 144,
     ):
         return build_liquidation_map_advanced(
             symbol=symbol,
@@ -66,6 +68,8 @@ def test_liquidation_map_route_supports_event_toggle(monkeypatch) -> None:
         range_pct: float,
         resolution: int,
         history_points: int,
+        candle_interval: str = "5m",
+        candle_limit: int = 144,
     ):
         bybit_events = (
             [{"side": "Sell", "price": "101.0", "size": "9", "updatedTime": "1710000000001"}]

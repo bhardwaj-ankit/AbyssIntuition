@@ -117,3 +117,9 @@ def test_signal_uses_advanced_liquidation_overlay() -> None:
     assert fake_runtime.called == 1
     assert result.direction in {Direction.LONG, Direction.SHORT, Direction.FLAT}
     assert any("Liquidation map" in reason for reason in result.reasons)
+    assert result.horizon == engine.cfg.signal_horizon
+    assert result.model_version == engine.cfg.model_version
+    assert result.feature_version == engine.cfg.feature_version
+    assert result.decision_ts is not None
+    assert result.expires_at is not None
+    assert result.expires_at > result.decision_ts

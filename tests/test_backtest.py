@@ -53,3 +53,38 @@ def test_bot_backtest_response_shape() -> None:
     assert result.final_capital > 0
     assert result.total_trades == len(result.trades)
     assert 0.0 <= result.win_rate <= 1.0
+
+
+def test_bot_backtest_can_take_long_trades_in_bullish_conditions() -> None:
+    engine = SignalEngine(client=FakeClient())
+    result = engine.simulate_bot_backtest(
+        symbol="BTCUSDT",
+        interval="1m",
+        candle_limit=220,
+        initial_capital=1000.0,
+        confidence_threshold=0.5,
+        use_liquidation_data=False,
+        use_sentiment_data=False,
+        use_volume_filter=False,
+    )
+
+    assert any(trade.side.value == "LONG" for trade in result.trades)
+
+
+def test_bot_backtest_with_relaxed_filters_can_produce_multiple_profitable_trades() -> None:
+    engine = SignalEngine(client=FakeClient())
+    result = engine.simulate_bot_backtest(
+        symbol="BTCUSDT",
+        interval="1m",
+        candle_limit=220,
+        initial_capital=1000.0,
+        confidence_threshold=0.5,
+        use_liquidation_data=False,
+        use_sentiment_data=False,
+        use_volume_filter=False,
+        use_htf_filter=False,
+        max_trades=10,
+    )
+
+    assert result.total_trades >= 3
+    assert result.final_capital > result.initial_capital

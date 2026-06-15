@@ -19,6 +19,18 @@ class BinanceFuturesClient:
         response.raise_for_status()
         return response.json()
 
+    @staticmethod
+    def _interval_ms(interval: str) -> int:
+        units = {
+            "m": 60_000,
+            "h": 60 * 60_000,
+            "d": 24 * 60 * 60_000,
+            "w": 7 * 24 * 60 * 60_000,
+        }
+        value = int(interval[:-1])
+        unit = interval[-1]
+        return value * units[unit]
+
     def get_mark_price_info(self, symbol: str) -> Dict[str, Any]:
         data = self._get_json("/fapi/v1/premiumIndex", params={"symbol": symbol})
         if isinstance(data, list):
@@ -38,8 +50,68 @@ class BinanceFuturesClient:
     def get_recent_trades(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
         return self._get_json("/fapi/v1/trades", params={"symbol": symbol, "limit": limit})
 
+    def get_klines(
+        self,
+        symbol: str,
+        interval: str = "1m",
+        limit: int = 20,
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> List[List[Any]]:
+        params: dict[str, Any] = {"symbol": symbol, "interval": interval, "limit": limit}
+        if start_time is not None:
+            params["startTime"] = int(start_time)
+        if end_time is not None:
+            params["endTime"] = int(end_time)
+        return self._get_json("/fapi/v1/klines", params=params)
+
     def get_recent_klines(self, symbol: str, interval: str = "1m", limit: int = 20) -> List[List[Any]]:
-        return self._get_json("/fapi/v1/klines", params={"symbol": symbol, "interval": interval, "limit": limit})
+        return self.get_klines(symbol=symbol, interval=interval, limit=limit)
+
+    def get_historical_klines(
+        self,
+        symbol: str,
+        interval: str,
+        start_time: int,
+        end_time: int,
+        limit_per_request: int = 1000,
+    ) -> List[List[Any]]:
+        cursor = int(start_time)
+        end_time = int(end_time)
+        step_ms = self._interval_ms(interval)
+        rows: List[List[Any]] = []
+
+        while cursor <= end_time:
+            batch = self.get_klines(
+                symbol=symbol,
+                interval=interval,
+                limit=min(limit_per_request, 1500),
+                start_time=cursor,
+                end_time=end_time,
+            )
+            if not batch:
+                break
+            rows.extend(batch)
+            last_open = int(batch[-1][0])
+            next_cursor = last_open + step_ms
+            if next_cursor <= cursor:
+                break
+            cursor = next_cursor
+            if len(batch) < min(limit_per_request, 1500):
+                break
+
+        deduped: list[list[Any]] = []
+        seen: set[int] = set()
+        for row in rows:
+            open_time = int(row[0])
+            if open_time in seen:
+                continue
+            seen.add(open_time)
+            deduped.append(row)
+        return deduped
+
+    def get_exchange_info(self) -> Dict[str, Any]:
+        return self._get_json("/fapi/v1/exchangeInfo", params={})
 
     def get_open_interest(self, symbol: str) -> Dict[str, Any]:
         return self._get_json("/fapi/v1/openInterest", params={"symbol": symbol})

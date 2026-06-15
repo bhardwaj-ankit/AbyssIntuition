@@ -134,6 +134,8 @@
         margin-top: 4px;
         color: var(--muted);
         font-size: 12px;
+        white-space: normal;
+        word-break: break-word;
       }
 
       details {
@@ -178,8 +180,232 @@
         font-size: 12px;
       }
 
-      #liqChart {
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .chart-panel,
+      .patterns-panel {
+        padding: 14px;
+      }
+
+      .chart-toolbar,
+      .pattern-heading {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      .chart-toolbar h2,
+      .pattern-heading h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .chart-toolbar p,
+      .pattern-heading p {
+        margin: 4px 0 0;
+      }
+
+      .status-pill,
+      .pattern-bias,
+      .tf-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+      }
+
+      .status-pill {
+        border: 1px solid transparent;
+      }
+
+      .stream-status-live {
+        background: rgba(34, 197, 94, 0.14);
+        border-color: rgba(34, 197, 94, 0.35);
+        color: #86efac;
+      }
+
+      .stream-status-connecting {
+        background: rgba(59, 130, 246, 0.14);
+        border-color: rgba(59, 130, 246, 0.35);
+        color: #93c5fd;
+      }
+
+      .stream-status-error {
+        background: rgba(244, 63, 94, 0.14);
+        border-color: rgba(244, 63, 94, 0.35);
+        color: #fda4af;
+      }
+
+      .status-row {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .chart-options {
+        margin-bottom: 12px;
+      }
+
+      .stat-chip {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px;
+        background: linear-gradient(180deg, rgba(14, 27, 58, 0.96), rgba(9, 16, 37, 0.96));
+      }
+
+      .stat-chip .k {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.65px;
+      }
+
+      .stat-chip .v {
+        display: block;
+        margin-top: 8px;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      #liveChart {
         height: 560px;
+      }
+
+      #indicatorChart {
+        height: 250px;
+      }
+
+      .live-stream-meta {
+        margin: 0 0 12px;
+      }
+
+      .indicator-combo-meta {
+        margin: 10px 0 10px;
+      }
+
+      .pattern-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .pattern-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: linear-gradient(180deg, rgba(14, 27, 58, 0.95), rgba(8, 16, 37, 0.98));
+      }
+
+      .pattern-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .tf-badge {
+        background: rgba(56, 189, 248, 0.14);
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        color: #7dd3fc;
+      }
+
+      .pattern-bias {
+        min-width: 88px;
+      }
+
+      .bias-bullish {
+        background: rgba(34, 197, 94, 0.14);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        color: #86efac;
+      }
+
+      .bias-bearish {
+        background: rgba(244, 63, 94, 0.14);
+        border: 1px solid rgba(244, 63, 94, 0.35);
+        color: #fda4af;
+      }
+
+      .bias-neutral {
+        background: rgba(148, 163, 184, 0.14);
+        border: 1px solid rgba(148, 163, 184, 0.32);
+        color: #cbd5e1;
+      }
+
+      .pattern-name {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .pattern-detail {
+        color: #d8e7ff;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .pattern-meta {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .cum-wrap {
+        margin-top: 16px;
+      }
+
+      .cum-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .cum-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: linear-gradient(180deg, rgba(10, 18, 48, 0.96), rgba(7, 14, 31, 0.98));
+      }
+
+      .cum-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .cum-score {
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .cum-reasons {
+        color: #d8e7ff;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .cum-meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      #liqChart {
+        height: 640px;
       }
 
       .legend {
@@ -188,6 +414,68 @@
         margin: 8px;
         color: #bfd4f6;
         font-size: 12px;
+      }
+
+      .liq-panel {
+        padding: 14px;
+      }
+
+      .liq-panel-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      .liq-panel-head h2 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: 0.2px;
+      }
+
+      .liq-panel-head p {
+        margin: 6px 0 0;
+        max-width: 760px;
+      }
+
+      .liq-shell {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr);
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .liq-scale {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        color: #9eb0c8;
+        font-size: 12px;
+      }
+
+      .liq-scale-bar {
+        flex: 1;
+        width: 100%;
+        min-height: 560px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(180deg, #f8f800 0%, #43c36a 48%, #2e7bb4 78%, #55117a 100%);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      }
+
+      .liq-chart-wrap {
+        min-width: 0;
+      }
+
+      .liq-legend {
+        margin: 0 0 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.64), rgba(9, 14, 28, 0.78));
       }
 
       .bot-summary {
@@ -271,10 +559,10 @@
         margin-right: 6px;
       }
 
-      .dot-candle { background: #38bdf8; }
-      .dot-above { background: #f43f5e; }
-      .dot-below { background: #22c55e; }
-      .dot-cluster { background: #fbbf24; }
+      .dot-candle { background: #ff6b7f; }
+      .dot-above { background: #98ff00; }
+      .dot-below { background: #16c0b8; }
+      .dot-cluster { background: #f8f800; }
 
       /* Market Behavior Modal */
       .modal {
@@ -390,16 +678,33 @@
       }
 
       @media (max-width: 900px) {
+        .hero-grid { grid-template-columns: 1fr; }
+        .status-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .card { grid-column: span 3; }
-        #liqChart { height: 460px; }
+        #liveChart { height: 480px; }
+        #indicatorChart { height: 220px; }
+        #liqChart { height: 520px; }
+        .liq-scale-bar { min-height: 520px; }
         .bot-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .ab-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
       }
 
       @media (max-width: 640px) {
+        .chart-toolbar,
+        .pattern-heading { align-items: flex-start; }
+        .status-row { grid-template-columns: 1fr; }
         .card { grid-column: span 6; }
         .controls { width: 100%; }
         select, button { flex: 1; }
+        .liq-shell { grid-template-columns: 1fr; }
+        .liq-scale {
+          flex-direction: row;
+          align-items: center;
+        }
+        .liq-scale-bar {
+          min-height: 18px;
+          width: 100%;
+        }
       }
     </style>
   </head>
@@ -424,34 +729,175 @@
 
       <div class="meta" id="refreshMeta">Waiting for first refresh...</div>
 
+      <section class="hero-grid">
+        <section class="panel chart-panel">
+          <div class="chart-toolbar">
+            <div>
+              <h2>Main Market Dashboard</h2>
+              <p>Live Binance Futures candlestick feed with a streaming chart and fast multi-timeframe context.</p>
+            </div>
+            <div class="controls">
+              <select id="chartIntervalSelect">
+                <option value="5m" selected>Chart 5m</option>
+                <option value="15m">Chart 15m</option>
+                <option value="1h">Chart 1h</option>
+              </select>
+              <div class="status-pill stream-status-connecting" id="streamStatus">Connecting...</div>
+            </div>
+          </div>
+          <div class="controls chart-options">
+            <label class="check-wrap">
+              <input id="showEmaStack" type="checkbox" checked />
+              EMA 20/50/200
+            </label>
+            <label class="check-wrap">
+              <input id="showVwap" type="checkbox" checked />
+              VWAP
+            </label>
+            <label class="check-wrap">
+              <input id="showLevels" type="checkbox" checked />
+              Support / Resistance
+            </label>
+          </div>
+          <div class="status-row">
+            <div class="stat-chip">
+              <span class="k">Live Price</span>
+              <span class="v" id="livePriceValue">-</span>
+            </div>
+            <div class="stat-chip">
+              <span class="k">Market Mode</span>
+              <span class="v" id="liveMarketModeValue">-</span>
+            </div>
+            <div class="stat-chip">
+              <span class="k">Candle Range</span>
+              <span class="v" id="liveRangeValue">-</span>
+            </div>
+            <div class="stat-chip">
+              <span class="k">Volume</span>
+              <span class="v" id="liveVolumeValue">-</span>
+            </div>
+            <div class="stat-chip">
+              <span class="k">Last Update</span>
+              <span class="v" id="liveUpdateValue">-</span>
+            </div>
+          </div>
+          <div class="status-row">
+            <div class="stat-chip">
+              <span class="k">EMA Stack</span>
+              <span class="v" id="liveEmaValue">-</span>
+            </div>
+            <div class="stat-chip">
+              <span class="k">RSI 14</span>
+              <span class="v" id="liveRsiValue">-</span>
+            </div>
+            <div class="stat-chip">
+              <span class="k">MACD</span>
+              <span class="v" id="liveMacdValue">-</span>
+            </div>
+            <div class="stat-chip">
+              <span class="k">Open Interest</span>
+              <span class="v" id="liveOiValue">-</span>
+            </div>
+            <div class="stat-chip">
+              <span class="k">Funding Rate</span>
+              <span class="v" id="liveFundingValue">-</span>
+            </div>
+          </div>
+          <div class="meta live-stream-meta" id="streamMeta">Bootstrapping historical candles before the websocket attaches...</div>
+          <div id="liveChart"></div>
+          <div class="meta indicator-combo-meta" id="indicatorComboMeta">Indicator combo loading...</div>
+          <div id="indicatorChart"></div>
+        </section>
+
+        <aside class="panel patterns-panel">
+          <div class="pattern-heading">
+            <div>
+              <h2>Detected Patterns</h2>
+              <p>Latest closed-candle structure across the 5m, 15m, and 1h views.</p>
+            </div>
+          </div>
+          <div class="pattern-list">
+            <article class="pattern-card">
+              <div class="pattern-card-head">
+                <span class="tf-badge">5m</span>
+                <span class="pattern-bias bias-neutral" id="pattern5mBias">WAIT</span>
+              </div>
+              <div class="pattern-name" id="pattern5mName">Loading 5m pattern...</div>
+              <div class="pattern-detail" id="pattern5mDetail">Collecting enough candles to identify a structure.</div>
+              <div class="pattern-meta" id="pattern5mMeta">Waiting for seed data</div>
+            </article>
+
+            <article class="pattern-card">
+              <div class="pattern-card-head">
+                <span class="tf-badge">15m</span>
+                <span class="pattern-bias bias-neutral" id="pattern15mBias">WAIT</span>
+              </div>
+              <div class="pattern-name" id="pattern15mName">Loading 15m pattern...</div>
+              <div class="pattern-detail" id="pattern15mDetail">Collecting enough candles to identify a structure.</div>
+              <div class="pattern-meta" id="pattern15mMeta">Waiting for seed data</div>
+            </article>
+
+            <article class="pattern-card">
+              <div class="pattern-card-head">
+                <span class="tf-badge">1h</span>
+                <span class="pattern-bias bias-neutral" id="pattern1hBias">WAIT</span>
+              </div>
+              <div class="pattern-name" id="pattern1hName">Loading 1h pattern...</div>
+              <div class="pattern-detail" id="pattern1hDetail">Collecting enough candles to identify a structure.</div>
+              <div class="pattern-meta" id="pattern1hMeta">Waiting for seed data</div>
+            </article>
+          </div>
+
+          <div class="cum-wrap">
+            <div class="pattern-heading">
+              <div>
+                <h2>Cumulative Signals</h2>
+                <p>Bot-ready combined signal from EMA, VWAP, RSI, MACD, levels, liquidation, OI, and funding.</p>
+              </div>
+            </div>
+            <div class="cum-grid">
+              <article class="cum-card">
+                <div class="cum-head">
+                  <span class="tf-badge">Aggregate</span>
+                  <span class="pattern-bias bias-neutral" id="cumAggregateBias">WAIT</span>
+                </div>
+                <div class="cum-score" id="cumAggregateScore">Loading...</div>
+                <div class="cum-reasons" id="cumAggregateReasons">Waiting for cumulative signal response.</div>
+                <div class="cum-meta" id="cumAggregateMeta">Agreement -</div>
+              </article>
+              <article class="cum-card">
+                <div class="cum-head">
+                  <span class="tf-badge">5m</span>
+                  <span class="pattern-bias bias-neutral" id="cum5mBias">WAIT</span>
+                </div>
+                <div class="cum-score" id="cum5mScore">Loading...</div>
+                <div class="cum-reasons" id="cum5mReasons">Waiting for cumulative signal response.</div>
+                <div class="cum-meta" id="cum5mMeta">Indicators -</div>
+              </article>
+              <article class="cum-card">
+                <div class="cum-head">
+                  <span class="tf-badge">15m</span>
+                  <span class="pattern-bias bias-neutral" id="cum15mBias">WAIT</span>
+                </div>
+                <div class="cum-score" id="cum15mScore">Loading...</div>
+                <div class="cum-reasons" id="cum15mReasons">Waiting for cumulative signal response.</div>
+                <div class="cum-meta" id="cum15mMeta">Indicators -</div>
+              </article>
+              <article class="cum-card">
+                <div class="cum-head">
+                  <span class="tf-badge">1h</span>
+                  <span class="pattern-bias bias-neutral" id="cum1hBias">WAIT</span>
+                </div>
+                <div class="cum-score" id="cum1hScore">Loading...</div>
+                <div class="cum-reasons" id="cum1hReasons">Waiting for cumulative signal response.</div>
+                <div class="cum-meta" id="cum1hMeta">Indicators -</div>
+              </article>
+            </div>
+          </div>
+        </aside>
+      </section>
+
       <section class="grid">
-        <article class="card">
-          <div class="label">Direction</div>
-          <div class="value" id="directionValue">-</div>
-          <div class="reasons" id="reasonsValue"></div>
-        </article>
-        <article class="card">
-          <div class="label">Confidence</div>
-          <div class="value" id="confidenceValue">-</div>
-          <div class="reasons" id="methodValue"></div>
-        </article>
-        <article class="card">
-          <div class="label">Current Price</div>
-          <div class="value" id="priceValue">-</div>
-        </article>
-        <article class="card">
-          <div class="label">Take Profit</div>
-          <div class="value" id="tpValue">-</div>
-        </article>
-        <article class="card">
-          <div class="label">Stop Loss</div>
-          <div class="value" id="slValue">-</div>
-        </article>
-        <article class="card">
-          <div class="label">Dominant Pull</div>
-          <div class="value" id="pullValue">-</div>
-          <div class="reasons" id="pullConfidence"></div>
-        </article>
         <article class="card" style="cursor: pointer; border: 2px solid #fbbf24; transition: all 0.2s;" onclick="showMarketBehaviorModal()">
           <div class="label">📊 Market Behavior</div>
           <div style="margin-top: 6px; font-size: 14px; color: #fbbf24;" id="behaviorLabel">Click to Analyze</div>
@@ -459,12 +905,7 @@
         </article>
       </section>
 
-      <details>
-        <summary>Signal Explain Response (Collapse / Expand)</summary>
-        <pre id="explainJson">{}</pre>
-      </details>
-
-      <section class="panel">
+      <section class="panel" id="backtestPanel" style="display:none;">
         <h2>Bot Trading Backtest</h2>
         <p>
           Paper trading test that follows model signals with default initial capital 1000 USD,
@@ -482,6 +923,10 @@
           <label class="check-wrap">
             <input id="useSentimentData" type="checkbox" checked />
             Use sentiment filter
+          </label>
+          <label class="check-wrap">
+            <input id="useVolumeFilter" type="checkbox" />
+            Use volume filter
           </label>
           <select id="htfIntervalSelect">
             <option value="15m" selected>HTF 15m</option>
@@ -538,7 +983,11 @@
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>Run</th>
                   <th>Side</th>
+                  <th>Signal</th>
+                  <th>Quality</th>
+                  <th>Horizon</th>
                   <th>Entry (Local)</th>
                   <th>Exit (Local)</th>
                   <th>Duration (min)</th>
@@ -546,11 +995,120 @@
                   <th>Exit Price</th>
                   <th>PnL</th>
                   <th>ROI %</th>
-                  <th>Reason</th>
+                  <th>Source</th>
+                  <th>Entry Reason</th>
+                  <th>Exit Reason</th>
                 </tr>
               </thead>
               <tbody id="backtestTradeRows">
-                <tr><td colspan="10" style="color:#8ca3c7;">No trades yet.</td></tr>
+                <tr><td colspan="15" style="color:#8ca3c7;">No trades yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section class="panel" id="paperBotPanel" style="display:none;">
+        <h2>Live Paper Bot</h2>
+        <p>
+          Scheduled paper bot that keeps polling the signal engine and manages one live paper position until stopped or until its scheduled run ends.
+        </p>
+        <div class="controls" style="padding: 8px;">
+          <select id="paperModeSelect">
+            <option value="CONSERVATIVE">Conservative</option>
+            <option value="BALANCED" selected>Balanced</option>
+            <option value="AGGRESSIVE">Aggressive</option>
+          </select>
+          <select id="paperRunMinutesSelect">
+            <option value="15">Run 15m</option>
+            <option value="30">Run 30m</option>
+            <option value="60" selected>Run 60m</option>
+            <option value="240">Run 4h</option>
+            <option value="0">Run until stopped</option>
+          </select>
+          <select id="paperPollSecondsSelect">
+            <option value="15">Poll 15s</option>
+            <option value="30" selected>Poll 30s</option>
+            <option value="60">Poll 60s</option>
+            <option value="120">Poll 120s</option>
+          </select>
+          <select id="paperLeverageSelect">
+            <option value="1">1x</option>
+            <option value="2">2x</option>
+            <option value="3" selected>3x</option>
+            <option value="5">5x</option>
+            <option value="10">10x</option>
+          </select>
+          <label class="check-wrap">
+            <input id="paperUseHtfFilter" type="checkbox" checked />
+            Use HTF filter
+          </label>
+          <label class="check-wrap">
+            <input id="paperUseCumulativeSignal" type="checkbox" checked />
+            Use cumulative MTF signal
+          </label>
+          <label class="check-wrap">
+            <input id="paperUseVolumeFilter" type="checkbox" />
+            Use volume filter
+          </label>
+          <button id="startPaperBotBtn" style="background: linear-gradient(135deg, #16a34a, #15803d);">Start Live Paper Bot</button>
+          <button id="stopPaperBotBtn" style="background: linear-gradient(135deg, #ef4444, #f97316);" disabled>Stop Live Paper Bot</button>
+          <button id="refreshPaperBotBtn" style="background: linear-gradient(135deg, #0f766e, #0369a1);">Refresh Live Status</button>
+        </div>
+        <div class="meta" id="paperBotMeta" style="padding: 0 8px 4px;">Paper bot idle.</div>
+        <div class="bot-summary">
+          <div class="bot-tile"><div class="k">Session</div><div class="v" id="paperSessionState">IDLE</div></div>
+          <div class="bot-tile"><div class="k">Mode</div><div class="v" id="paperModeValue">BALANCED</div></div>
+          <div class="bot-tile"><div class="k">Current Capital</div><div class="v" id="paperCapital">1000.00</div></div>
+          <div class="bot-tile"><div class="k">Realized PnL</div><div class="v" id="paperRealized">0.00</div></div>
+          <div class="bot-tile"><div class="k">Unrealized PnL</div><div class="v" id="paperUnrealized">0.00</div></div>
+          <div class="bot-tile"><div class="k">Trades</div><div class="v" id="paperTrades">0</div></div>
+          <div class="bot-tile"><div class="k">Win Rate</div><div class="v" id="paperWinRate">0.0%</div></div>
+        </div>
+        <div class="meta" style="padding: 0 8px 4px;">Live trade refreshes automatically every 5 seconds while the bot is running.</div>
+        <div class="bot-summary">
+          <div class="bot-tile"><div class="k">Live Side</div><div class="v" id="paperLiveSide">-</div></div>
+          <div class="bot-tile"><div class="k">Entry Price</div><div class="v" id="paperLiveEntry">-</div></div>
+          <div class="bot-tile"><div class="k">Current Price</div><div class="v" id="paperLiveCurrent">-</div></div>
+          <div class="bot-tile"><div class="k">Live PnL</div><div class="v" id="paperLivePnl">-</div></div>
+          <div class="bot-tile"><div class="k">Live ROI %</div><div class="v" id="paperLiveRoi">-</div></div>
+          <div class="bot-tile"><div class="k">Liquidation Price</div><div class="v" id="paperLiveLiq">-</div></div>
+          <div class="bot-tile"><div class="k">Take Profit</div><div class="v" id="paperLiveTp">-</div></div>
+          <div class="bot-tile"><div class="k">Stop Loss</div><div class="v" id="paperLiveSl">-</div></div>
+        </div>
+        <details style="margin: 8px;" open>
+          <summary>Live Trade / Last Signal</summary>
+          <pre id="paperBotOpenPosition">No open position.</pre>
+        </details>
+        <div class="controls" style="padding: 0 8px 8px;">
+          <button id="togglePaperHistoryBtn" style="background: linear-gradient(135deg, #334155, #475569);">Show Past Trades</button>
+        </div>
+        <details style="margin: 8px;" id="paperHistoryDetails">
+          <summary>Past Paper Trades</summary>
+          <div class="trade-log-wrap">
+            <table class="trade-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Run</th>
+                  <th>Side</th>
+                  <th>Signal</th>
+                  <th>Quality</th>
+                  <th>Horizon</th>
+                  <th>Entry (Local)</th>
+                  <th>Exit (Local)</th>
+                  <th>Duration (min)</th>
+                  <th>Entry Price</th>
+                  <th>Exit Price</th>
+                  <th>PnL</th>
+                  <th>ROI %</th>
+                  <th>Source</th>
+                  <th>Entry Reason</th>
+                  <th>Exit Reason</th>
+                </tr>
+              </thead>
+              <tbody id="paperTradeRows">
+                <tr><td colspan="16" style="color:#8ca3c7;">No paper bot trades yet.</td></tr>
               </tbody>
             </table>
           </div>
@@ -558,35 +1116,182 @@
       </section>
 
       <section class="panel">
-        <h2>Liquidity Map Graph</h2>
+        <h2>Bybit Demo Bot</h2>
         <p>
-          CoinGlass-style price map: price on the vertical axis, time on the horizontal axis, with color only indicating relative liquidation density.
+          Real demo trading bot for Bybit demo mode. `Conservative`, `Balanced`, and `Aggressive` remain quality-setup trader modes, while `Scalping` is the faster, looser mode for more frequent entries and quicker trade recycling.
         </p>
         <div class="controls" style="padding: 8px;">
-          <select id="liqRangeSelect">
-            <option value="8">Range 8%</option>
-            <option value="12" selected>Range 12%</option>
-            <option value="18">Range 18%</option>
+          <select id="bybitDemoModeSelect">
+            <option value="SCALPING">Scalping</option>
+            <option value="CONSERVATIVE">Conservative</option>
+            <option value="BALANCED" selected>Balanced</option>
+            <option value="AGGRESSIVE">Aggressive</option>
           </select>
-          <select id="liqResolutionSelect">
-            <option value="24">24 rows</option>
-            <option value="48" selected>48 rows</option>
-            <option value="96">96 rows</option>
+          <select id="bybitDemoPollSecondsSelect">
+            <option value="5" selected>Poll 5s</option>
+            <option value="10">Poll 10s</option>
+            <option value="15">Poll 15s</option>
+            <option value="30">Poll 30s</option>
+            <option value="60">Poll 60s</option>
           </select>
-          <select id="liqHistorySelect">
-            <option value="8">8 slices</option>
-            <option value="16" selected>16 slices</option>
-            <option value="24">24 slices</option>
+          <select id="bybitDemoLeverageSelect">
+            <option value="1">1x</option>
+            <option value="2" selected>2x</option>
+            <option value="3">3x</option>
+            <option value="5">5x</option>
+            <option value="10">10x</option>
           </select>
+          <select id="bybitDemoRiskSelect">
+            <option value="0.005">Risk 0.5%</option>
+            <option value="0.01" selected>Risk 1.0%</option>
+            <option value="0.015">Risk 1.5%</option>
+            <option value="0.02">Risk 2.0%</option>
+          </select>
+          <select id="bybitDemoMarginSelect">
+            <option value="0.20">Margin 20%</option>
+            <option value="0.35" selected>Margin 35%</option>
+            <option value="0.50">Margin 50%</option>
+            <option value="0.75">Margin 75%</option>
+          </select>
+          <select id="bybitDemoCooldownSelect">
+            <option value="15">Cooldown 15s</option>
+            <option value="30" selected>Cooldown 30s</option>
+            <option value="60">Cooldown 1m</option>
+            <option value="180">Cooldown 3m</option>
+            <option value="300">Cooldown 5m</option>
+            <option value="900">Cooldown 15m</option>
+          </select>
+          <button id="startBybitDemoBotBtn" style="background: linear-gradient(135deg, #16a34a, #15803d);">Start Bybit Demo Bot</button>
+          <button id="stopBybitDemoBotBtn" style="background: linear-gradient(135deg, #ef4444, #f97316);" disabled>Stop Bybit Demo Bot</button>
+          <button id="refreshBybitDemoBotBtn" style="background: linear-gradient(135deg, #0f766e, #0369a1);">Refresh Demo Status</button>
         </div>
-        <div class="meta" id="liqMeta" style="padding: 0 8px 6px;">Waiting for liquidation surface...</div>
-        <div class="legend">
-          <span><span class="dot dot-candle"></span>Candles</span>
-          <span><span class="dot dot-above"></span>Live Liquidations</span>
-          <span><span class="dot dot-below"></span>Depth / Support</span>
-          <span><span class="dot dot-cluster"></span>Stored Heatmap Tiles</span>
+        <div class="meta" id="bybitDemoConfigMeta" style="padding: 0 8px 4px;">Checking Bybit demo config...</div>
+        <div class="meta" id="bybitDemoBotMeta" style="padding: 0 8px 4px;">Bybit demo bot idle.</div>
+        <div class="bot-summary">
+          <div class="bot-tile"><div class="k">Config</div><div class="v" id="bybitDemoConfigState">CHECKING</div></div>
+          <div class="bot-tile"><div class="k">Session</div><div class="v" id="bybitDemoSessionState">IDLE</div></div>
+          <div class="bot-tile"><div class="k">Mode</div><div class="v" id="bybitDemoModeValue">BALANCED</div></div>
+          <div class="bot-tile"><div class="k">AI Supervisor</div><div class="v" id="bybitDemoAiState">OFF</div></div>
+          <div class="bot-tile"><div class="k">AI Model</div><div class="v" id="bybitDemoAiModel">-</div></div>
+          <div class="bot-tile"><div class="k">Available Balance</div><div class="v" id="bybitDemoAvailable">0.00</div></div>
+          <div class="bot-tile"><div class="k">Wallet Balance</div><div class="v" id="bybitDemoWallet">0.00</div></div>
+          <div class="bot-tile"><div class="k">Account Equity</div><div class="v" id="bybitDemoEquity">0.00</div></div>
+          <div class="bot-tile"><div class="k">Trades</div><div class="v" id="bybitDemoTrades">0</div></div>
+          <div class="bot-tile"><div class="k">Last Action</div><div class="v" id="bybitDemoLastAction">idle</div></div>
         </div>
-        <div id="liqChart"></div>
+        <div class="meta" style="padding: 0 8px 4px;">Paste your Bybit key into <code>runtime/bybit_demo_config.json</code> and your OpenAI key into <code>runtime/ai_supervisor_config.json</code>, then click Refresh Demo Status if the API is already running.</div>
+        <div class="meta" style="padding: 0 8px 4px;">Past performance is pulled from Bybit demo closed-PnL history, so it stays visible even when the bot is idle.</div>
+        <div class="meta" style="padding: 0 8px 4px;">The bot signal below is the actual Bybit bot decision path. Cumulative bias, EMA stack, and market behavior elsewhere on the page are separate analysis layers and can disagree.</div>
+        <div class="bot-summary">
+          <div class="bot-tile"><div class="k">Bot Signal</div><div class="v" id="bybitDemoSignalDirection">-</div></div>
+          <div class="bot-tile"><div class="k">Bot Confidence</div><div class="v" id="bybitDemoSignalConfidence">-</div></div>
+          <div class="bot-tile"><div class="k">Bot Quality</div><div class="v" id="bybitDemoSignalQuality">-</div></div>
+          <div class="bot-tile"><div class="k">Bot Horizon</div><div class="v" id="bybitDemoSignalHorizon">-</div></div>
+        </div>
+        <div class="bot-summary">
+          <div class="bot-tile"><div class="k">Past Trades</div><div class="v" id="bybitDemoPerfTrades">0</div></div>
+          <div class="bot-tile"><div class="k">Past Win Rate</div><div class="v" id="bybitDemoPerfWinRate">0.0%</div></div>
+          <div class="bot-tile"><div class="k">Past Net PnL</div><div class="v" id="bybitDemoPerfNet">0.00</div></div>
+          <div class="bot-tile"><div class="k">Avg ROI %</div><div class="v" id="bybitDemoPerfAvgRoi">0.00%</div></div>
+          <div class="bot-tile"><div class="k">Best Trade</div><div class="v" id="bybitDemoPerfBest">0.00</div></div>
+          <div class="bot-tile"><div class="k">Worst Trade</div><div class="v" id="bybitDemoPerfWorst">0.00</div></div>
+          <div class="bot-tile"><div class="k">Profit Factor</div><div class="v" id="bybitDemoPerfFactor">-</div></div>
+          <div class="bot-tile"><div class="k">Last Closed Trade</div><div class="v" id="bybitDemoPerfLastTrade">-</div></div>
+        </div>
+        <div class="bot-summary">
+          <div class="bot-tile"><div class="k">Live Side</div><div class="v" id="bybitDemoLiveSide">-</div></div>
+          <div class="bot-tile"><div class="k">Position Size</div><div class="v" id="bybitDemoLiveSize">-</div></div>
+          <div class="bot-tile"><div class="k">Entry Price</div><div class="v" id="bybitDemoLiveEntry">-</div></div>
+          <div class="bot-tile"><div class="k">Mark Price</div><div class="v" id="bybitDemoLiveMark">-</div></div>
+          <div class="bot-tile"><div class="k">Position Value</div><div class="v" id="bybitDemoLiveValue">-</div></div>
+          <div class="bot-tile"><div class="k">Live PnL</div><div class="v" id="bybitDemoLivePnl">-</div></div>
+          <div class="bot-tile"><div class="k">Live ROI %</div><div class="v" id="bybitDemoLiveRoi">-</div></div>
+          <div class="bot-tile"><div class="k">TP / SL</div><div class="v" id="bybitDemoLiveTpsl">-</div></div>
+        </div>
+        <details style="margin: 8px;" open>
+          <summary>Bybit Demo Position / Last Signal</summary>
+          <pre id="bybitDemoOpenPosition">No exchange position.</pre>
+        </details>
+        <div class="controls" style="padding: 0 8px 8px;">
+          <button id="toggleBybitDemoHistoryBtn" style="background: linear-gradient(135deg, #334155, #475569);">Show Demo Trade History</button>
+        </div>
+        <details style="margin: 8px;" id="bybitDemoHistoryDetails">
+          <summary>Recent Bybit Demo Trades</summary>
+          <div class="trade-log-wrap">
+            <table class="trade-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Run</th>
+                  <th>Side</th>
+                  <th>Signal</th>
+                  <th>Quality</th>
+                  <th>Horizon</th>
+                  <th>Entry (Local)</th>
+                  <th>Exit (Local)</th>
+                  <th>Duration (min)</th>
+                  <th>Entry Price</th>
+                  <th>Exit Price</th>
+                  <th>PnL</th>
+                  <th>ROI %</th>
+                  <th>Source</th>
+                  <th>Entry Reason</th>
+                  <th>Exit Reason</th>
+                </tr>
+              </thead>
+              <tbody id="bybitDemoTradeRows">
+                <tr><td colspan="16" style="color:#8ca3c7;">No Bybit demo trades yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section class="panel liq-panel">
+        <div class="liq-panel-head">
+          <div>
+            <h2 id="liqTitle">BTC Liquidation Heatmap (12 hour)</h2>
+            <p id="liqSubtitle">
+              CoinGlass-inspired liquidation map with long horizontal density bands, live candle overlay, and a wider market window.
+            </p>
+          </div>
+          <div class="controls">
+            <select id="liqWindowSelect">
+              <option value="2h">2 hour</option>
+              <option value="6h">6 hour</option>
+              <option value="12h" selected>12 hour</option>
+              <option value="24h">24 hour</option>
+            </select>
+            <select id="liqRangeSelect">
+              <option value="8">Range 8%</option>
+              <option value="12" selected>Range 12%</option>
+              <option value="18">Range 18%</option>
+            </select>
+            <select id="liqResolutionSelect">
+              <option value="32">32 rows</option>
+              <option value="48" selected>48 rows</option>
+              <option value="72">72 rows</option>
+              <option value="96">96 rows</option>
+            </select>
+          </div>
+        </div>
+        <div class="meta" id="liqMeta">Waiting for liquidation surface...</div>
+        <div class="legend liq-legend">
+          <span><span class="dot dot-cluster"></span>Liquidation density</span>
+          <span><span class="dot dot-candle"></span>Price candles</span>
+          <span><span class="dot dot-below"></span>Current price</span>
+          <span><span class="dot dot-above"></span>Live liquidations</span>
+        </div>
+        <div class="liq-shell">
+          <div class="liq-scale">
+            <span id="liqScaleTop">0</span>
+            <div class="liq-scale-bar"></div>
+            <span id="liqScaleBottom">0</span>
+          </div>
+          <div class="liq-chart-wrap">
+            <div id="liqChart"></div>
+          </div>
+        </div>
       </section>
     </div>
 
@@ -608,31 +1313,66 @@
       const autoRefresh = document.getElementById("autoRefresh");
       const refreshBtn = document.getElementById("refreshBtn");
       const refreshMeta = document.getElementById("refreshMeta");
+      const chartIntervalSelect = document.getElementById("chartIntervalSelect");
+      const showEmaStack = document.getElementById("showEmaStack");
+      const showVwap = document.getElementById("showVwap");
+      const showLevels = document.getElementById("showLevels");
+      const streamStatus = document.getElementById("streamStatus");
+      const streamMeta = document.getElementById("streamMeta");
+      const livePriceValue = document.getElementById("livePriceValue");
+      const liveMarketModeValue = document.getElementById("liveMarketModeValue");
+      const liveRangeValue = document.getElementById("liveRangeValue");
+      const liveVolumeValue = document.getElementById("liveVolumeValue");
+      const liveUpdateValue = document.getElementById("liveUpdateValue");
+      const liveEmaValue = document.getElementById("liveEmaValue");
+      const liveRsiValue = document.getElementById("liveRsiValue");
+      const liveMacdValue = document.getElementById("liveMacdValue");
+      const liveOiValue = document.getElementById("liveOiValue");
+      const liveFundingValue = document.getElementById("liveFundingValue");
+      const indicatorComboMeta = document.getElementById("indicatorComboMeta");
 
-      const directionValue = document.getElementById("directionValue");
-      const confidenceValue = document.getElementById("confidenceValue");
-      const priceValue = document.getElementById("priceValue");
-      const tpValue = document.getElementById("tpValue");
-      const slValue = document.getElementById("slValue");
-      const reasonsValue = document.getElementById("reasonsValue");
-      const pullValue = document.getElementById("pullValue");
-      const pullConfidence = document.getElementById("pullConfidence");
-      const methodValue = document.getElementById("methodValue");
-      const explainJson = document.getElementById("explainJson");
+      const liqTitle = document.getElementById("liqTitle");
+      const liqSubtitle = document.getElementById("liqSubtitle");
+      const liqWindowSelect = document.getElementById("liqWindowSelect");
       const liqRangeSelect = document.getElementById("liqRangeSelect");
       const liqResolutionSelect = document.getElementById("liqResolutionSelect");
-      const liqHistorySelect = document.getElementById("liqHistorySelect");
       const liqMeta = document.getElementById("liqMeta");
+      const liqScaleTop = document.getElementById("liqScaleTop");
+      const liqScaleBottom = document.getElementById("liqScaleBottom");
       const runBacktestBtn = document.getElementById("runBacktestBtn");
       const stopBacktestBtn = document.getElementById("stopBacktestBtn");
       const resetBacktestBtn = document.getElementById("resetBacktestBtn");
       const runABBtn = document.getElementById("runABBtn");
+      const startPaperBotBtn = document.getElementById("startPaperBotBtn");
+      const stopPaperBotBtn = document.getElementById("stopPaperBotBtn");
+      const refreshPaperBotBtn = document.getElementById("refreshPaperBotBtn");
+      const startBybitDemoBotBtn = document.getElementById("startBybitDemoBotBtn");
+      const stopBybitDemoBotBtn = document.getElementById("stopBybitDemoBotBtn");
+      const refreshBybitDemoBotBtn = document.getElementById("refreshBybitDemoBotBtn");
       const useLiqForBacktest = document.getElementById("useLiqForBacktest");
       const useHtfFilter = document.getElementById("useHtfFilter");
       const useSentimentData = document.getElementById("useSentimentData");
+      const useVolumeFilter = document.getElementById("useVolumeFilter");
       const htfIntervalSelect = document.getElementById("htfIntervalSelect");
       const htfLookbackSelect = document.getElementById("htfLookbackSelect");
+      const paperRunMinutesSelect = document.getElementById("paperRunMinutesSelect");
+      const paperPollSecondsSelect = document.getElementById("paperPollSecondsSelect");
+      const paperModeSelect = document.getElementById("paperModeSelect");
+      const paperLeverageSelect = document.getElementById("paperLeverageSelect");
+      const bybitDemoPollSecondsSelect = document.getElementById("bybitDemoPollSecondsSelect");
+      const bybitDemoModeSelect = document.getElementById("bybitDemoModeSelect");
+      const bybitDemoLeverageSelect = document.getElementById("bybitDemoLeverageSelect");
+      const bybitDemoRiskSelect = document.getElementById("bybitDemoRiskSelect");
+      const bybitDemoMarginSelect = document.getElementById("bybitDemoMarginSelect");
+      const bybitDemoCooldownSelect = document.getElementById("bybitDemoCooldownSelect");
+      const paperUseHtfFilter = document.getElementById("paperUseHtfFilter");
+      const paperUseCumulativeSignal = document.getElementById("paperUseCumulativeSignal");
+      const paperUseVolumeFilter = document.getElementById("paperUseVolumeFilter");
       const backtestMeta = document.getElementById("backtestMeta");
+      const paperBotMeta = document.getElementById("paperBotMeta");
+      const bybitDemoConfigMeta = document.getElementById("bybitDemoConfigMeta");
+      const bybitDemoBotMeta = document.getElementById("bybitDemoBotMeta");
+      const btInitial = document.getElementById("btInitial");
       const abMeta = document.getElementById("abMeta");
       const btFinal = document.getElementById("btFinal");
       const btReturn = document.getElementById("btReturn");
@@ -650,22 +1390,1370 @@
       const abOnStats = document.getElementById("abOnStats");
       const abOffStats = document.getElementById("abOffStats");
       const backtestTradeRows = document.getElementById("backtestTradeRows");
+      const paperTradeRows = document.getElementById("paperTradeRows");
+      const paperHistoryDetails = document.getElementById("paperHistoryDetails");
+      const togglePaperHistoryBtn = document.getElementById("togglePaperHistoryBtn");
+      const bybitDemoHistoryDetails = document.getElementById("bybitDemoHistoryDetails");
+      const toggleBybitDemoHistoryBtn = document.getElementById("toggleBybitDemoHistoryBtn");
+      const paperSessionState = document.getElementById("paperSessionState");
+      const paperModeValue = document.getElementById("paperModeValue");
+      const paperCapital = document.getElementById("paperCapital");
+      const paperRealized = document.getElementById("paperRealized");
+      const paperUnrealized = document.getElementById("paperUnrealized");
+      const paperTrades = document.getElementById("paperTrades");
+      const paperWinRate = document.getElementById("paperWinRate");
+      const paperBotOpenPosition = document.getElementById("paperBotOpenPosition");
+      const paperLiveSide = document.getElementById("paperLiveSide");
+      const paperLiveEntry = document.getElementById("paperLiveEntry");
+      const paperLiveCurrent = document.getElementById("paperLiveCurrent");
+      const paperLivePnl = document.getElementById("paperLivePnl");
+      const paperLiveRoi = document.getElementById("paperLiveRoi");
+      const paperLiveLiq = document.getElementById("paperLiveLiq");
+      const paperLiveTp = document.getElementById("paperLiveTp");
+      const paperLiveSl = document.getElementById("paperLiveSl");
+      const bybitDemoConfigState = document.getElementById("bybitDemoConfigState");
+      const bybitDemoSessionState = document.getElementById("bybitDemoSessionState");
+      const bybitDemoModeValue = document.getElementById("bybitDemoModeValue");
+      const bybitDemoAiState = document.getElementById("bybitDemoAiState");
+      const bybitDemoAiModel = document.getElementById("bybitDemoAiModel");
+      const bybitDemoSignalDirection = document.getElementById("bybitDemoSignalDirection");
+      const bybitDemoSignalConfidence = document.getElementById("bybitDemoSignalConfidence");
+      const bybitDemoSignalQuality = document.getElementById("bybitDemoSignalQuality");
+      const bybitDemoSignalHorizon = document.getElementById("bybitDemoSignalHorizon");
+      const bybitDemoAvailable = document.getElementById("bybitDemoAvailable");
+      const bybitDemoWallet = document.getElementById("bybitDemoWallet");
+      const bybitDemoEquity = document.getElementById("bybitDemoEquity");
+      const bybitDemoTrades = document.getElementById("bybitDemoTrades");
+      const bybitDemoLastAction = document.getElementById("bybitDemoLastAction");
+      const bybitDemoOpenPosition = document.getElementById("bybitDemoOpenPosition");
+      const bybitDemoLiveSide = document.getElementById("bybitDemoLiveSide");
+      const bybitDemoLiveSize = document.getElementById("bybitDemoLiveSize");
+      const bybitDemoLiveEntry = document.getElementById("bybitDemoLiveEntry");
+      const bybitDemoLiveMark = document.getElementById("bybitDemoLiveMark");
+      const bybitDemoLiveValue = document.getElementById("bybitDemoLiveValue");
+      const bybitDemoLivePnl = document.getElementById("bybitDemoLivePnl");
+      const bybitDemoLiveRoi = document.getElementById("bybitDemoLiveRoi");
+      const bybitDemoLiveTpsl = document.getElementById("bybitDemoLiveTpsl");
+      const bybitDemoPerfTrades = document.getElementById("bybitDemoPerfTrades");
+      const bybitDemoPerfWinRate = document.getElementById("bybitDemoPerfWinRate");
+      const bybitDemoPerfNet = document.getElementById("bybitDemoPerfNet");
+      const bybitDemoPerfAvgRoi = document.getElementById("bybitDemoPerfAvgRoi");
+      const bybitDemoPerfBest = document.getElementById("bybitDemoPerfBest");
+      const bybitDemoPerfWorst = document.getElementById("bybitDemoPerfWorst");
+      const bybitDemoPerfFactor = document.getElementById("bybitDemoPerfFactor");
+      const bybitDemoPerfLastTrade = document.getElementById("bybitDemoPerfLastTrade");
+      const bybitDemoTradeRows = document.getElementById("bybitDemoTradeRows");
+      const cumulativeSignalElements = {
+        aggregate: {
+          bias: document.getElementById("cumAggregateBias"),
+          score: document.getElementById("cumAggregateScore"),
+          reasons: document.getElementById("cumAggregateReasons"),
+          meta: document.getElementById("cumAggregateMeta")
+        },
+        "5m": {
+          bias: document.getElementById("cum5mBias"),
+          score: document.getElementById("cum5mScore"),
+          reasons: document.getElementById("cum5mReasons"),
+          meta: document.getElementById("cum5mMeta")
+        },
+        "15m": {
+          bias: document.getElementById("cum15mBias"),
+          score: document.getElementById("cum15mScore"),
+          reasons: document.getElementById("cum15mReasons"),
+          meta: document.getElementById("cum15mMeta")
+        },
+        "1h": {
+          bias: document.getElementById("cum1hBias"),
+          score: document.getElementById("cum1hScore"),
+          reasons: document.getElementById("cum1hReasons"),
+          meta: document.getElementById("cum1hMeta")
+        }
+      };
       let autoTimer = null;
+      let ttlTimer = null;
+      let paperBotTimer = null;
+      let bybitDemoBotTimer = null;
       let rollingCapital = 1000.0;
       let backtestAbortController = null;
       let cumulativeTrades = [];
+      let latestSignalExpiry = null;
+      let latestCumulativeSignal = null;
+      let bybitDemoPerformanceCache = null;
+      const DEFAULT_API_TOKEN = "swRhuQk4p6E16hOTv_uosKRFqMURPOKSNX9cog73br0";
+      const API_TOKEN_STORAGE_KEY = "abyss_api_token";
+      let bybitDemoConfigStateCache = {
+        configured: false,
+        config_path: "runtime/bybit_demo_config.json",
+        message: "",
+        ai_enabled: false,
+        ai_configured: false,
+        ai_model: null,
+        ai_message: ""
+      };
+      const LIVE_INTERVALS = ["5m", "15m", "1h"];
+      const liveMarketState = {
+        symbol: pairSelect.value,
+        activeInterval: chartIntervalSelect.value,
+        websocket: null,
+        reconnectTimer: null,
+        reconnectAttempts: 0,
+        lastStreamAt: null,
+        loadToken: 0,
+        latestMarketMetrics: null,
+        series: {
+          "5m": [],
+          "15m": [],
+          "1h": []
+        }
+      };
+      const patternElements = {
+        "5m": {
+          name: document.getElementById("pattern5mName"),
+          detail: document.getElementById("pattern5mDetail"),
+          meta: document.getElementById("pattern5mMeta"),
+          bias: document.getElementById("pattern5mBias")
+        },
+        "15m": {
+          name: document.getElementById("pattern15mName"),
+          detail: document.getElementById("pattern15mDetail"),
+          meta: document.getElementById("pattern15mMeta"),
+          bias: document.getElementById("pattern15mBias")
+        },
+        "1h": {
+          name: document.getElementById("pattern1hName"),
+          detail: document.getElementById("pattern1hDetail"),
+          meta: document.getElementById("pattern1hMeta"),
+          bias: document.getElementById("pattern1hBias")
+        }
+      };
 
       const numFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
       const compactFmt = new Intl.NumberFormat("en-US", {
         notation: "compact",
         maximumFractionDigits: 2
       });
+      const liquidationWindowConfig = {
+        "2h": { label: "2 hour", interval: "1m", candleLimit: 120, historyPoints: 48 },
+        "6h": { label: "6 hour", interval: "5m", candleLimit: 72, historyPoints: 48 },
+        "12h": { label: "12 hour", interval: "5m", candleLimit: 144, historyPoints: 72 },
+        "24h": { label: "24 hour", interval: "15m", candleLimit: 96, historyPoints: 64 }
+      };
+
+      function getApiToken() {
+        const stored = window.localStorage.getItem(API_TOKEN_STORAGE_KEY);
+        return String(stored || DEFAULT_API_TOKEN || "").trim();
+      }
+
+      function shouldAttachAuth(input) {
+        const url = typeof input === "string" ? input : String(input?.url || "");
+        if (!url) return false;
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+          try {
+            const parsed = new URL(url);
+            if (parsed.origin !== window.location.origin) {
+              return false;
+            }
+            return !["/", "/health", "/docs", "/redoc", "/openapi.json"].includes(parsed.pathname) && !parsed.pathname.startsWith("/static/");
+          } catch (error) {
+            return false;
+          }
+        }
+        return !["/", "/health", "/docs", "/redoc", "/openapi.json"].includes(url) && !url.startsWith("/static/");
+      }
+
+      const rawFetch = window.fetch.bind(window);
+      window.fetch = function(input, init = {}) {
+        if (!shouldAttachAuth(input)) {
+          return rawFetch(input, init);
+        }
+
+        const headers = new Headers(init.headers || {});
+        const token = getApiToken();
+        if (token && !headers.has("Authorization")) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+        return rawFetch(input, { ...init, headers });
+      };
+
+      async function loadAvailableSymbols() {
+        const currentValue = String(pairSelect.value || liveMarketState.symbol || "BTCUSDT").toUpperCase();
+        try {
+          const response = await fetch("/market/symbols?limit=6");
+          if (!response.ok) {
+            throw new Error("symbol list request failed");
+          }
+
+          const payload = await response.json();
+          const symbols = Array.isArray(payload?.symbols) ? payload.symbols : [];
+          if (!symbols.length) {
+            throw new Error("no symbols returned");
+          }
+
+          pairSelect.innerHTML = "";
+          symbols.forEach((item) => {
+            const option = document.createElement("option");
+            option.value = String(item.symbol || "").toUpperCase();
+            option.textContent = `${option.value} • ${item.base_asset}/${item.quote_asset}`;
+            pairSelect.appendChild(option);
+          });
+
+          const fallbackValue = symbols.some((item) => item.symbol === currentValue) ? currentValue : "BTCUSDT";
+          pairSelect.value = fallbackValue;
+        } catch (error) {
+          refreshMeta.textContent = `Symbol list fallback active: ${error.message}`;
+        }
+      }
+
+      function average(values) {
+        if (!Array.isArray(values) || values.length === 0) return 0;
+        return values.reduce((sum, value) => sum + Number(value || 0), 0) / values.length;
+      }
+
+      function pctChange(fromValue, toValue) {
+        const base = Number(fromValue || 0);
+        if (!base) return 0;
+        return ((Number(toValue || 0) - base) / base) * 100;
+      }
+
+      function formatSigned(value, digits = 2, suffix = "") {
+        const num = Number(value || 0);
+        const prefix = num > 0 ? "+" : "";
+        return `${prefix}${num.toFixed(digits)}${suffix}`;
+      }
+
+      function getLiquidationWindow() {
+        return liquidationWindowConfig[liqWindowSelect.value] || liquidationWindowConfig["12h"];
+      }
+
+      function quantile(values, q) {
+        if (!Array.isArray(values) || values.length === 0) return 0;
+        const sorted = [...values].sort((a, b) => a - b);
+        const pos = (sorted.length - 1) * Math.max(0, Math.min(1, q));
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        const next = sorted[Math.min(base + 1, sorted.length - 1)];
+        return sorted[base] + (next - sorted[base]) * rest;
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function getPriceDecimals(price) {
+        const numeric = Number(price || 0);
+        if (!Number.isFinite(numeric) || numeric <= 0) return 3;
+        if (numeric >= 1000) return 0;
+        if (numeric >= 100) return 2;
+        if (numeric >= 1) return 3;
+        if (numeric >= 0.1) return 4;
+        if (numeric >= 0.01) return 5;
+        return 6;
+      }
+
+      function formatPrice(value, digits = getPriceDecimals(value)) {
+        return Number(value || 0).toLocaleString("en-US", {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits
+        });
+      }
+
+      function inferAssetName(symbol) {
+        const normalized = String(symbol || "").toUpperCase();
+        for (const suffix of ["USDT", "USDC", "BUSD", "FDUSD", "BTC", "ETH"]) {
+          if (normalized.endsWith(suffix) && normalized.length > suffix.length) {
+            return normalized.slice(0, -suffix.length);
+          }
+        }
+        return normalized;
+      }
+
+      function interpolateRgb(stops, value) {
+        const t = clamp(value, 0, 1);
+        for (let index = 1; index < stops.length; index += 1) {
+          const [stopT, stopColor] = stops[index];
+          const [prevT, prevColor] = stops[index - 1];
+          if (t <= stopT) {
+            const ratio = stopT === prevT ? 0 : (t - prevT) / (stopT - prevT);
+            const rgb = prevColor.map((channel, channelIndex) =>
+              Math.round(channel + (stopColor[channelIndex] - channel) * ratio)
+            );
+            return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+          }
+        }
+        const last = stops[stops.length - 1][1];
+        return `rgb(${last[0]}, ${last[1]}, ${last[2]})`;
+      }
+
+      function classifyMomentumValue(element, value, upper = 0.01, lower = -0.01) {
+        element.classList.remove("direction-long", "direction-short", "direction-flat");
+        if (value >= upper) {
+          element.classList.add("direction-long");
+        } else if (value <= lower) {
+          element.classList.add("direction-short");
+        } else {
+          element.classList.add("direction-flat");
+        }
+      }
 
       function setDirectionClass(element, direction) {
         element.classList.remove("direction-long", "direction-short", "direction-flat");
         if (direction === "LONG") element.classList.add("direction-long");
         if (direction === "SHORT") element.classList.add("direction-short");
         if (direction === "FLAT") element.classList.add("direction-flat");
+      }
+
+      function setStreamStatus(status, message) {
+        streamStatus.className = `status-pill stream-status-${status}`;
+        streamStatus.textContent = message;
+      }
+
+      function normalizeHistoricalCandle(candle) {
+        return {
+          open_time: Number(candle.open_time),
+          open: Number(candle.open),
+          high: Number(candle.high),
+          low: Number(candle.low),
+          close: Number(candle.close),
+          volume: Number(candle.volume),
+          isClosed: true
+        };
+      }
+
+      function normalizeWebsocketCandle(kline) {
+        return {
+          open_time: Number(kline.t),
+          open: Number(kline.o),
+          high: Number(kline.h),
+          low: Number(kline.l),
+          close: Number(kline.c),
+          volume: Number(kline.v),
+          isClosed: Boolean(kline.x)
+        };
+      }
+
+      function candleStats(candle) {
+        const range = Math.max(Number(candle.high) - Number(candle.low), 1e-9);
+        const body = Math.abs(Number(candle.close) - Number(candle.open));
+        return {
+          range,
+          body,
+          bullish: Number(candle.close) > Number(candle.open),
+          bearish: Number(candle.close) < Number(candle.open),
+          upperShadow: Number(candle.high) - Math.max(Number(candle.open), Number(candle.close)),
+          lowerShadow: Math.min(Number(candle.open), Number(candle.close)) - Number(candle.low)
+        };
+      }
+
+      function biasClassName(bias) {
+        if (bias === "BULLISH") return "bias-bullish";
+        if (bias === "BEARISH") return "bias-bearish";
+        return "bias-neutral";
+      }
+
+      function updatePatternCard(interval, pattern) {
+        const target = patternElements[interval];
+        if (!target) return;
+        target.name.textContent = pattern.name;
+        target.detail.textContent = pattern.detail;
+        target.meta.textContent = pattern.meta;
+        target.bias.textContent = pattern.bias;
+        target.bias.className = `pattern-bias ${biasClassName(pattern.bias)}`;
+      }
+
+      function updateCumulativeSignalCard(key, payload) {
+        const target = cumulativeSignalElements[key];
+        if (!target) return;
+        target.bias.textContent = payload.bias;
+        target.bias.className = `pattern-bias ${biasClassName(payload.bias)}`;
+        target.score.textContent = payload.score;
+        target.reasons.textContent = payload.reasons;
+        target.meta.textContent = payload.meta;
+      }
+
+      function renderCumulativeSignals(data) {
+        latestCumulativeSignal = data;
+        if (!data) {
+          updateCumulativeSignalCard("aggregate", {
+            bias: "WAIT",
+            score: "Loading...",
+            reasons: "Waiting for cumulative signal response.",
+            meta: "Agreement -"
+          });
+          ["5m", "15m", "1h"].forEach((timeframe) => {
+            updateCumulativeSignalCard(timeframe, {
+              bias: "WAIT",
+              score: "Loading...",
+              reasons: "Waiting for cumulative signal response.",
+              meta: "Indicators -"
+            });
+          });
+          return;
+        }
+
+        updateCumulativeSignalCard("aggregate", {
+          bias: data.aggregate_direction,
+          score: `${data.aggregate_direction} ${(Number(data.aggregate_confidence || 0) * 100).toFixed(1)}%`,
+          reasons: Array.isArray(data.reasons) && data.reasons.length ? data.reasons.join(" | ") : "No aggregate reasons",
+          meta: `${data.market_mode || "TRANSITIONAL"} • ${String(data.strategy_mode || "STAY_FLAT").replaceAll("_", " ")} • Agreement ${(Number(data.agreement_ratio || 0) * 100).toFixed(0)}% • Quality ${data.signal_quality || "N/A"}`
+        });
+
+        ["5m", "15m", "1h"].forEach((timeframe) => {
+          const row = Array.isArray(data.timeframes) ? data.timeframes.find((item) => item.timeframe === timeframe) : null;
+          if (!row) {
+            updateCumulativeSignalCard(timeframe, {
+              bias: "WAIT",
+              score: "Unavailable",
+              reasons: "No signal available for this timeframe.",
+              meta: "Indicators -"
+            });
+            return;
+          }
+          updateCumulativeSignalCard(timeframe, {
+            bias: row.direction,
+            score: `${row.direction} ${(Number(row.confidence || 0) * 100).toFixed(1)}%`,
+            reasons: Array.isArray(row.reasons) && row.reasons.length ? row.reasons.join(" | ") : row.pattern,
+            meta: `${row.market_mode || "TRANSITIONAL"} • ADX ${row.adx14 == null ? "-" : Number(row.adx14).toFixed(1)} • ATR ${Number(row.atr_pct || 0).toFixed(2)}% ${row.atr_state || ""} • Fail ${(Number(row.breakout_failure_rate || 0) * 100).toFixed(0)}%`
+          });
+        });
+      }
+
+      function detectPattern(interval) {
+        const source = (liveMarketState.series[interval] || []).filter((candle) => candle.isClosed !== false);
+        if (source.length < 20) {
+          return {
+            name: "Building context",
+            bias: "WAIT",
+            detail: "Pattern engine needs at least 20 closed candles before it can score structure reliably.",
+            meta: `${source.length}/20 candles loaded`
+          };
+        }
+
+        const candles = source.slice(-40);
+        const last = candles[candles.length - 1];
+        const prev = candles[candles.length - 2];
+        const third = candles[candles.length - 3];
+        const lastStats = candleStats(last);
+        const prevStats = prev ? candleStats(prev) : null;
+        const thirdStats = third ? candleStats(third) : null;
+        const bodyBaseline = average(candles.slice(-12).map((candle) => candleStats(candle).body));
+        const volumeBaseline = average(candles.slice(-12).map((candle) => candle.volume));
+        const moveWindow = candles.slice(-8);
+        const movePct = pctChange(moveWindow[0].close, moveWindow[moveWindow.length - 1].close);
+        const rangePct = average(
+          candles.slice(-8).map((candle) => ((Number(candle.high) - Number(candle.low)) / Math.max(Number(candle.close), 1)) * 100)
+        );
+        const priorHigh = Math.max(...candles.slice(-21, -1).map((candle) => Number(candle.high)));
+        const priorLow = Math.min(...candles.slice(-21, -1).map((candle) => Number(candle.low)));
+        const patterns = [];
+
+        if (
+          prev &&
+          prevStats &&
+          prevStats.bearish &&
+          lastStats.bullish &&
+          Number(last.open) <= Number(prev.close) &&
+          Number(last.close) >= Number(prev.open) &&
+          lastStats.body >= bodyBaseline * 0.9
+        ) {
+          patterns.push({
+            name: "Bullish Engulfing",
+            bias: "BULLISH",
+            confidence: 0.82,
+            detail: "The latest candle fully absorbed the prior bearish body, which often signals an upside reversal."
+          });
+        }
+
+        if (
+          prev &&
+          prevStats &&
+          prevStats.bullish &&
+          lastStats.bearish &&
+          Number(last.open) >= Number(prev.close) &&
+          Number(last.close) <= Number(prev.open) &&
+          lastStats.body >= bodyBaseline * 0.9
+        ) {
+          patterns.push({
+            name: "Bearish Engulfing",
+            bias: "BEARISH",
+            confidence: 0.82,
+            detail: "The latest candle erased the prior bullish body, which often warns of sellers taking control."
+          });
+        }
+
+        if (
+          lastStats.lowerShadow >= lastStats.body * 2.4 &&
+          lastStats.upperShadow <= Math.max(lastStats.body * 0.65, lastStats.range * 0.18) &&
+          Number(last.close) >= Number(last.high) - lastStats.range * 0.35
+        ) {
+          patterns.push({
+            name: "Hammer Reversal",
+            bias: "BULLISH",
+            confidence: 0.74,
+            detail: "A long lower wick with buyers reclaiming the close suggests rejection of lower prices."
+          });
+        }
+
+        if (
+          lastStats.upperShadow >= lastStats.body * 2.4 &&
+          lastStats.lowerShadow <= Math.max(lastStats.body * 0.65, lastStats.range * 0.18) &&
+          Number(last.close) <= Number(last.low) + lastStats.range * 0.35
+        ) {
+          patterns.push({
+            name: "Shooting Star",
+            bias: "BEARISH",
+            confidence: 0.74,
+            detail: "A stretched upper wick with a weak close points to supply stepping in near the highs."
+          });
+        }
+
+        if (
+          third &&
+          prev &&
+          thirdStats &&
+          prevStats &&
+          thirdStats.bearish &&
+          prevStats.body <= bodyBaseline * 0.75 &&
+          lastStats.bullish &&
+          Number(last.close) > (Number(third.open) + Number(third.close)) / 2
+        ) {
+          patterns.push({
+            name: "Morning Star",
+            bias: "BULLISH",
+            confidence: 0.78,
+            detail: "A three-candle reversal sequence is forming with bearish exhaustion followed by recovery."
+          });
+        }
+
+        if (
+          third &&
+          prev &&
+          thirdStats &&
+          prevStats &&
+          thirdStats.bullish &&
+          prevStats.body <= bodyBaseline * 0.75 &&
+          lastStats.bearish &&
+          Number(last.close) < (Number(third.open) + Number(third.close)) / 2
+        ) {
+          patterns.push({
+            name: "Evening Star",
+            bias: "BEARISH",
+            confidence: 0.78,
+            detail: "A three-candle reversal sequence is forming with bullish exhaustion followed by downside follow-through."
+          });
+        }
+
+        if (Number(last.close) > priorHigh && Number(last.volume) > volumeBaseline * 1.15) {
+          patterns.push({
+            name: "Bullish Breakout",
+            bias: "BULLISH",
+            confidence: 0.8,
+            detail: "Price closed above the recent 20-candle ceiling with expanding volume."
+          });
+        }
+
+        if (Number(last.close) < priorLow && Number(last.volume) > volumeBaseline * 1.15) {
+          patterns.push({
+            name: "Bearish Breakdown",
+            bias: "BEARISH",
+            confidence: 0.8,
+            detail: "Price closed below the recent 20-candle floor with expanding volume."
+          });
+        }
+
+        if (
+          candles.slice(-3).every((candle) => candleStats(candle).bullish) &&
+          Number(candles[candles.length - 1].close) > Number(candles[candles.length - 2].close) &&
+          Number(candles[candles.length - 2].close) > Number(candles[candles.length - 3].close)
+        ) {
+          patterns.push({
+            name: "Three Candle Drive Up",
+            bias: "BULLISH",
+            confidence: 0.72,
+            detail: "Three consecutive bullish closes are keeping momentum stacked to the upside."
+          });
+        }
+
+        if (
+          candles.slice(-3).every((candle) => candleStats(candle).bearish) &&
+          Number(candles[candles.length - 1].close) < Number(candles[candles.length - 2].close) &&
+          Number(candles[candles.length - 2].close) < Number(candles[candles.length - 3].close)
+        ) {
+          patterns.push({
+            name: "Three Candle Drive Down",
+            bias: "BEARISH",
+            confidence: 0.72,
+            detail: "Three consecutive bearish closes are keeping momentum stacked to the downside."
+          });
+        }
+
+        if (lastStats.body / lastStats.range <= 0.1) {
+          patterns.push({
+            name: "Doji / Indecision",
+            bias: "NEUTRAL",
+            confidence: 0.6,
+            detail: "The latest candle has a very small body relative to range, showing hesitation."
+          });
+        }
+
+        let winner = null;
+        if (patterns.length) {
+          patterns.sort((a, b) => b.confidence - a.confidence);
+          winner = patterns[0];
+        } else if (movePct >= 1.2) {
+          winner = {
+            name: "Trend Continuation Up",
+            bias: "BULLISH",
+            confidence: Math.min(0.76, 0.56 + Math.abs(movePct) / 8),
+            detail: "Price is printing higher closes without a fresh reversal setup against the move."
+          };
+        } else if (movePct <= -1.2) {
+          winner = {
+            name: "Trend Continuation Down",
+            bias: "BEARISH",
+            confidence: Math.min(0.76, 0.56 + Math.abs(movePct) / 8),
+            detail: "Price is printing lower closes without a fresh reversal setup against the move."
+          };
+        } else if (rangePct <= 0.55) {
+          winner = {
+            name: "Compression Range",
+            bias: "NEUTRAL",
+            confidence: 0.57,
+            detail: "Average candle range is tight, so the market looks coiled rather than directional."
+          };
+        } else {
+          winner = {
+            name: "Mixed Structure",
+            bias: "NEUTRAL",
+            confidence: 0.51,
+            detail: "No clean high-conviction candlestick pattern is dominating this timeframe right now."
+          };
+        }
+
+        return {
+          ...winner,
+          meta: `Confidence ${(winner.confidence * 100).toFixed(0)}% • Last close ${new Date(last.open_time).toLocaleString()}`
+        };
+      }
+
+      function calculateEMA(values, period) {
+        if (!Array.isArray(values) || values.length === 0) return [];
+        const multiplier = 2 / (period + 1);
+        const result = [];
+        let ema = Number(values[0] || 0);
+        for (let index = 0; index < values.length; index += 1) {
+          const value = Number(values[index] || 0);
+          if (index === 0) {
+            ema = value;
+          } else {
+            ema = ((value - ema) * multiplier) + ema;
+          }
+          result.push(ema);
+        }
+        return result;
+      }
+
+      function calculateVWAP(candles) {
+        const values = [];
+        let cumulativeTpv = 0;
+        let cumulativeVolume = 0;
+        candles.forEach((candle) => {
+          const typicalPrice = (Number(candle.high) + Number(candle.low) + Number(candle.close)) / 3;
+          const volume = Number(candle.volume || 0);
+          cumulativeTpv += typicalPrice * volume;
+          cumulativeVolume += volume;
+          values.push(cumulativeVolume > 0 ? cumulativeTpv / cumulativeVolume : typicalPrice);
+        });
+        return values;
+      }
+
+      function calculateRSI(candles, period = 14) {
+        if (!Array.isArray(candles) || candles.length === 0) return [];
+        const closes = candles.map((candle) => Number(candle.close || 0));
+        const rsi = Array(closes.length).fill(null);
+        if (closes.length <= period) return rsi;
+
+        let gainSum = 0;
+        let lossSum = 0;
+        for (let index = 1; index <= period; index += 1) {
+          const delta = closes[index] - closes[index - 1];
+          gainSum += Math.max(delta, 0);
+          lossSum += Math.max(-delta, 0);
+        }
+
+        let avgGain = gainSum / period;
+        let avgLoss = lossSum / period;
+        rsi[period] = avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
+
+        for (let index = period + 1; index < closes.length; index += 1) {
+          const delta = closes[index] - closes[index - 1];
+          const gain = Math.max(delta, 0);
+          const loss = Math.max(-delta, 0);
+          avgGain = ((avgGain * (period - 1)) + gain) / period;
+          avgLoss = ((avgLoss * (period - 1)) + loss) / period;
+          rsi[index] = avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
+        }
+        return rsi;
+      }
+
+      function calculateMACD(candles) {
+        const closes = candles.map((candle) => Number(candle.close || 0));
+        const ema12 = calculateEMA(closes, 12);
+        const ema26 = calculateEMA(closes, 26);
+        const macd = closes.map((_, index) => ema12[index] - ema26[index]);
+        const signal = calculateEMA(macd, 9);
+        const histogram = macd.map((value, index) => value - signal[index]);
+        return { macd, signal, histogram };
+      }
+
+      function deriveSupportResistanceLevels(candles) {
+        if (!Array.isArray(candles) || candles.length < 12) {
+          return { supports: [], resistances: [] };
+        }
+        const pivotsHigh = [];
+        const pivotsLow = [];
+        const recent = candles.slice(-90);
+        for (let index = 2; index < recent.length - 2; index += 1) {
+          const candle = recent[index];
+          const high = Number(candle.high);
+          const low = Number(candle.low);
+          const prev1 = recent[index - 1];
+          const prev2 = recent[index - 2];
+          const next1 = recent[index + 1];
+          const next2 = recent[index + 2];
+          if (
+            high >= Number(prev1.high) &&
+            high >= Number(prev2.high) &&
+            high >= Number(next1.high) &&
+            high >= Number(next2.high)
+          ) {
+            pivotsHigh.push(high);
+          }
+          if (
+            low <= Number(prev1.low) &&
+            low <= Number(prev2.low) &&
+            low <= Number(next1.low) &&
+            low <= Number(next2.low)
+          ) {
+            pivotsLow.push(low);
+          }
+        }
+
+        const dedupeLevels = (levels, direction) => {
+          const sorted = [...levels].sort((left, right) => direction === "asc" ? left - right : right - left);
+          const deduped = [];
+          sorted.forEach((level) => {
+            const tooClose = deduped.some((value) => Math.abs(value - level) / Math.max(level, 1) < 0.0035);
+            if (!tooClose) deduped.push(level);
+          });
+          return deduped;
+        };
+
+        const lastClose = Number(candles[candles.length - 1].close || 0);
+        const resistances = dedupeLevels(pivotsHigh.filter((level) => level >= lastClose), "asc").slice(0, 3);
+        const supports = dedupeLevels(pivotsLow.filter((level) => level <= lastClose), "desc").slice(0, 3);
+        return { supports, resistances };
+      }
+
+      function analyzeLiveIndicators(interval) {
+        const candles = liveMarketState.series[interval] || [];
+        if (!candles.length) {
+          return null;
+        }
+        const closes = candles.map((candle) => Number(candle.close || 0));
+        const ema20 = calculateEMA(closes, 20);
+        const ema50 = calculateEMA(closes, 50);
+        const ema200 = calculateEMA(closes, 200);
+        const vwap = calculateVWAP(candles);
+        const rsi = calculateRSI(candles, 14);
+        const macdSet = calculateMACD(candles);
+        const levels = deriveSupportResistanceLevels(candles);
+        return {
+          ema20,
+          ema50,
+          ema200,
+          vwap,
+          rsi,
+          macd: macdSet.macd,
+          signal: macdSet.signal,
+          histogram: macdSet.histogram,
+          levels
+        };
+      }
+
+      function renderPatternCards() {
+        LIVE_INTERVALS.forEach((interval) => {
+          updatePatternCard(interval, detectPattern(interval));
+        });
+      }
+
+      function renderEmptyLiveChart(message) {
+        Plotly.react(
+          "liveChart",
+          [],
+          {
+            paper_bgcolor: "#0b122b",
+            plot_bgcolor: "#0b122b",
+            margin: { l: 40, r: 40, t: 30, b: 40 },
+            xaxis: { visible: false },
+            yaxis: { visible: false },
+            annotations: [
+              {
+                text: message,
+                x: 0.5,
+                y: 0.5,
+                xref: "paper",
+                yref: "paper",
+                showarrow: false,
+                font: { color: "#c8ddff", size: 16 }
+              }
+            ]
+          },
+          { responsive: true, displayModeBar: false }
+        );
+      }
+
+      function renderEmptyIndicatorChart(message) {
+        Plotly.react(
+          "indicatorChart",
+          [],
+          {
+            paper_bgcolor: "#0b122b",
+            plot_bgcolor: "#0b122b",
+            margin: { l: 40, r: 24, t: 18, b: 30 },
+            xaxis: { visible: false },
+            yaxis: { visible: false },
+            annotations: [
+              {
+                text: message,
+                x: 0.5,
+                y: 0.5,
+                xref: "paper",
+                yref: "paper",
+                showarrow: false,
+                font: { color: "#c8ddff", size: 14 }
+              }
+            ]
+          },
+          { responsive: true, displayModeBar: false }
+        );
+      }
+
+      function refreshLiveStats() {
+        const interval = liveMarketState.activeInterval;
+        const series = liveMarketState.series[interval] || [];
+        const last = series[series.length - 1];
+        const indicators = analyzeLiveIndicators(interval);
+
+        if (!last) {
+          livePriceValue.textContent = "-";
+          liveMarketModeValue.textContent = "-";
+          liveRangeValue.textContent = "-";
+          liveVolumeValue.textContent = "-";
+          liveUpdateValue.textContent = "-";
+          liveEmaValue.textContent = "-";
+          liveRsiValue.textContent = "-";
+          liveMacdValue.textContent = "-";
+          liveOiValue.textContent = "-";
+          liveFundingValue.textContent = "-";
+          liveMarketModeValue.classList.remove("direction-long", "direction-short", "direction-flat");
+          liveEmaValue.classList.remove("direction-long", "direction-short", "direction-flat");
+          liveRsiValue.classList.remove("direction-long", "direction-short", "direction-flat");
+          liveMacdValue.classList.remove("direction-long", "direction-short", "direction-flat");
+          liveFundingValue.classList.remove("direction-long", "direction-short", "direction-flat");
+          indicatorComboMeta.textContent = "Indicator combo waiting for candle history.";
+          return;
+        }
+
+        const candleRangePct = ((Number(last.high) - Number(last.low)) / Math.max(Number(last.close), 1)) * 100;
+        livePriceValue.textContent = numFmt.format(last.close);
+        liveRangeValue.textContent = `${candleRangePct.toFixed(2)}%`;
+        liveVolumeValue.textContent = compactFmt.format(last.volume);
+        liveUpdateValue.textContent = liveMarketState.lastStreamAt
+          ? new Date(liveMarketState.lastStreamAt).toLocaleTimeString()
+          : new Date(last.open_time).toLocaleTimeString();
+
+        if (latestCumulativeSignal?.market_mode) {
+          liveMarketModeValue.textContent = latestCumulativeSignal.market_mode;
+          setDirectionClass(
+            liveMarketModeValue,
+            latestCumulativeSignal.market_mode === "TRENDING"
+              ? "LONG"
+              : latestCumulativeSignal.market_mode === "RANGING"
+                ? "FLAT"
+                : "SHORT"
+          );
+        } else {
+          liveMarketModeValue.textContent = "Loading...";
+          liveMarketModeValue.classList.remove("direction-long", "direction-short", "direction-flat");
+        }
+
+        if (indicators) {
+          const latestEma20 = indicators.ema20[indicators.ema20.length - 1];
+          const latestEma50 = indicators.ema50[indicators.ema50.length - 1];
+          const latestEma200 = indicators.ema200[indicators.ema200.length - 1];
+          const latestRsi = indicators.rsi[indicators.rsi.length - 1];
+          const latestMacd = indicators.macd[indicators.macd.length - 1];
+          const latestSignal = indicators.signal[indicators.signal.length - 1];
+          let emaState = "Mixed";
+          if (latestEma20 > latestEma50 && latestEma50 > latestEma200) {
+            emaState = "Bullish";
+          } else if (latestEma20 < latestEma50 && latestEma50 < latestEma200) {
+            emaState = "Bearish";
+          }
+          liveEmaValue.textContent = emaState;
+          setDirectionClass(
+            liveEmaValue,
+            emaState === "Bullish" ? "LONG" : emaState === "Bearish" ? "SHORT" : "FLAT"
+          );
+          liveRsiValue.textContent = latestRsi == null ? "-" : latestRsi.toFixed(1);
+          classifyMomentumValue(liveRsiValue, latestRsi == null ? 0 : latestRsi - 50, 6, -6);
+          liveMacdValue.textContent = `${formatSigned(latestMacd, 2)} / ${formatSigned(latestSignal, 2)}`;
+          classifyMomentumValue(liveMacdValue, latestMacd - latestSignal, 0.01, -0.01);
+          const supportLabel = indicators.levels.supports[0] ? numFmt.format(indicators.levels.supports[0]) : "n/a";
+          const resistanceLabel = indicators.levels.resistances[0] ? numFmt.format(indicators.levels.resistances[0]) : "n/a";
+          indicatorComboMeta.textContent = `Combo: EMA stack + VWAP + RSI + MACD + key levels. Nearest support ${supportLabel}, nearest resistance ${resistanceLabel}.`;
+        }
+
+        if (liveMarketState.latestMarketMetrics) {
+          const metrics = liveMarketState.latestMarketMetrics;
+          liveOiValue.textContent = `$${compactFmt.format(Number(metrics.open_interest_value || 0))}`;
+          liveFundingValue.textContent = `${formatSigned(Number(metrics.last_funding_rate_bps || 0), 2)} bps`;
+          classifyMomentumValue(liveFundingValue, Number(metrics.last_funding_rate_bps || 0), 0.01, -0.01);
+        } else {
+          liveOiValue.textContent = "-";
+          liveFundingValue.textContent = "-";
+          liveFundingValue.classList.remove("direction-long", "direction-short", "direction-flat");
+        }
+      }
+
+      function renderIndicatorChart() {
+        const interval = liveMarketState.activeInterval;
+        const candles = liveMarketState.series[interval] || [];
+        const indicators = analyzeLiveIndicators(interval);
+        if (!candles.length || !indicators) {
+          renderEmptyIndicatorChart("Waiting for indicator data...");
+          return;
+        }
+
+        const x = candles.map((candle) => new Date(candle.open_time));
+        const histogramColors = indicators.histogram.map((value) =>
+          value >= 0 ? "rgba(34,197,94,0.45)" : "rgba(244,63,94,0.45)"
+        );
+
+        Plotly.react(
+          "indicatorChart",
+          [
+            {
+              type: "scatter",
+              mode: "lines",
+              x,
+              y: indicators.rsi,
+              line: { color: "#38bdf8", width: 2 },
+              name: "RSI 14",
+              yaxis: "y"
+            },
+            {
+              type: "bar",
+              x,
+              y: indicators.histogram,
+              marker: { color: histogramColors },
+              name: "Histogram",
+              yaxis: "y2"
+            },
+            {
+              type: "scatter",
+              mode: "lines",
+              x,
+              y: indicators.macd,
+              line: { color: "#fbbf24", width: 2 },
+              name: "MACD",
+              yaxis: "y2"
+            },
+            {
+              type: "scatter",
+              mode: "lines",
+              x,
+              y: indicators.signal,
+              line: { color: "#f472b6", width: 1.8 },
+              name: "Signal",
+              yaxis: "y2"
+            }
+          ],
+          {
+            paper_bgcolor: "#0b122b",
+            plot_bgcolor: "#0b122b",
+            margin: { l: 44, r: 24, t: 12, b: 32 },
+            xaxis: {
+              color: "#c8ddff",
+              showgrid: false,
+              anchor: "y2"
+            },
+            yaxis: {
+              domain: [0.56, 1],
+              color: "#c8ddff",
+              showgrid: false,
+              range: [0, 100],
+              title: { text: "RSI", font: { color: "#8ca3c7", size: 11 } }
+            },
+            yaxis2: {
+              domain: [0, 0.38],
+              color: "#c8ddff",
+              showgrid: false,
+              title: { text: "MACD", font: { color: "#8ca3c7", size: 11 } }
+            },
+            shapes: [
+              {
+                type: "line",
+                xref: "paper",
+                x0: 0,
+                x1: 1,
+                yref: "y",
+                y0: 70,
+                y1: 70,
+                line: { color: "rgba(244,63,94,0.32)", dash: "dot", width: 1 }
+              },
+              {
+                type: "line",
+                xref: "paper",
+                x0: 0,
+                x1: 1,
+                yref: "y",
+                y0: 30,
+                y1: 30,
+                line: { color: "rgba(34,197,94,0.32)", dash: "dot", width: 1 }
+              },
+              {
+                type: "line",
+                xref: "paper",
+                x0: 0,
+                x1: 1,
+                yref: "y2",
+                y0: 0,
+                y1: 0,
+                line: { color: "rgba(148,163,184,0.32)", dash: "dot", width: 1 }
+              }
+            ],
+            legend: {
+              orientation: "h",
+              yanchor: "bottom",
+              y: 1.02,
+              x: 0,
+              font: { color: "#c8ddff", size: 11 }
+            }
+          },
+          {
+            responsive: true,
+            displayModeBar: false
+          }
+        );
+      }
+
+      function renderLiveChart() {
+        const interval = liveMarketState.activeInterval;
+        const candles = liveMarketState.series[interval] || [];
+        const indicators = analyzeLiveIndicators(interval);
+        if (!candles.length) {
+          renderEmptyLiveChart("Loading live candlesticks...");
+          renderEmptyIndicatorChart("Loading RSI and MACD...");
+          return;
+        }
+
+        const x = candles.map((candle) => new Date(candle.open_time));
+        const last = candles[candles.length - 1];
+
+        const volumeTrace = {
+          type: "bar",
+          x,
+          y: candles.map((candle) => candle.volume),
+          yaxis: "y2",
+          marker: {
+            color: candles.map((candle) =>
+              Number(candle.close) >= Number(candle.open) ? "rgba(45,212,191,0.45)" : "rgba(251,113,133,0.45)"
+            )
+          },
+          hovertemplate: "Time: %{x}<br>Volume: %{y:,.2f}<extra></extra>"
+        };
+
+        const candleTrace = {
+          type: "candlestick",
+          x,
+          open: candles.map((candle) => candle.open),
+          high: candles.map((candle) => candle.high),
+          low: candles.map((candle) => candle.low),
+          close: candles.map((candle) => candle.close),
+          increasing: { line: { color: "#2dd4bf", width: 1.2 }, fillcolor: "#2dd4bf" },
+          decreasing: { line: { color: "#fb7185", width: 1.2 }, fillcolor: "#fb7185" },
+          whiskerwidth: 0.4,
+          hoverlabel: { bgcolor: "#0f172a" }
+        };
+
+        const overlayTraces = [];
+        if (indicators && showEmaStack.checked) {
+          overlayTraces.push(
+            {
+              type: "scatter",
+              mode: "lines",
+              x,
+              y: indicators.ema20,
+              line: { color: "#fbbf24", width: 1.7 },
+              name: "EMA 20",
+              hovertemplate: "EMA 20: %{y:.2f}<extra></extra>"
+            },
+            {
+              type: "scatter",
+              mode: "lines",
+              x,
+              y: indicators.ema50,
+              line: { color: "#60a5fa", width: 1.7 },
+              name: "EMA 50",
+              hovertemplate: "EMA 50: %{y:.2f}<extra></extra>"
+            },
+            {
+              type: "scatter",
+              mode: "lines",
+              x,
+              y: indicators.ema200,
+              line: { color: "#c084fc", width: 1.7 },
+              name: "EMA 200",
+              hovertemplate: "EMA 200: %{y:.2f}<extra></extra>"
+            }
+          );
+        }
+        if (indicators && showVwap.checked) {
+          overlayTraces.push({
+            type: "scatter",
+            mode: "lines",
+            x,
+            y: indicators.vwap,
+            line: { color: "#fb923c", width: 1.9, dash: "dot" },
+            name: "VWAP",
+            hovertemplate: "VWAP: %{y:.2f}<extra></extra>"
+          });
+        }
+
+        const levelShapes = [];
+        if (indicators && showLevels.checked) {
+          indicators.levels.supports.forEach((level) => {
+            levelShapes.push({
+              type: "line",
+              x0: x[0],
+              x1: x[x.length - 1],
+              y0: level,
+              y1: level,
+              line: { color: "rgba(34,197,94,0.26)", width: 1.2, dash: "dot" }
+            });
+          });
+          indicators.levels.resistances.forEach((level) => {
+            levelShapes.push({
+              type: "line",
+              x0: x[0],
+              x1: x[x.length - 1],
+              y0: level,
+              y1: level,
+              line: { color: "rgba(244,63,94,0.26)", width: 1.2, dash: "dot" }
+            });
+          });
+        }
+
+        Plotly.react(
+          "liveChart",
+          [volumeTrace, candleTrace, ...overlayTraces],
+          {
+            paper_bgcolor: "#0b122b",
+            plot_bgcolor: "#0b122b",
+            margin: { l: 44, r: 68, t: 12, b: 34 },
+            uirevision: `${liveMarketState.symbol}-${interval}`,
+            xaxis: {
+              color: "#c8ddff",
+              showgrid: false,
+              rangeslider: { visible: false },
+              title: { text: `${liveMarketState.symbol} ${interval} candles`, font: { color: "#8ca3c7", size: 12 } }
+            },
+            yaxis: {
+              domain: [0.24, 1],
+              side: "right",
+              color: "#c8ddff",
+              showgrid: false,
+              tickformat: ",.2f",
+              title: { text: "Price", font: { color: "#8ca3c7", size: 12 } }
+            },
+            yaxis2: {
+              domain: [0, 0.16],
+              color: "#8ca3c7",
+              showgrid: false,
+              title: { text: "Volume", font: { color: "#8ca3c7", size: 11 } }
+            },
+            shapes: [
+              {
+                type: "line",
+                x0: x[0],
+                x1: x[x.length - 1],
+                y0: Number(last.close),
+                y1: Number(last.close),
+                line: {
+                  color: "#fbbf24",
+                  width: 1,
+                  dash: "dot"
+                }
+              },
+              ...levelShapes
+            ],
+            annotations: [
+              {
+                x: x[x.length - 1],
+                y: Number(last.close),
+                xref: "x",
+                yref: "y",
+                text: numFmt.format(last.close),
+                showarrow: false,
+                xanchor: "left",
+                yanchor: "middle",
+                font: { color: "#f8fafc", size: 12 },
+                bgcolor: "#f59e0b",
+                bordercolor: "#fbbf24",
+                borderpad: 4
+              }
+            ],
+            legend: {
+              orientation: "h",
+              yanchor: "bottom",
+              y: 1.01,
+              x: 0,
+              font: { color: "#c8ddff", size: 11 }
+            },
+            showlegend: true
+          },
+          {
+            responsive: true,
+            displayModeBar: false,
+            scrollZoom: true
+          }
+        );
+        renderIndicatorChart();
+      }
+
+      function upsertStreamCandle(interval, candle) {
+        const series = liveMarketState.series[interval] || [];
+        const matchIndex = series.findIndex((row) => Number(row.open_time) === Number(candle.open_time));
+        if (matchIndex >= 0) {
+          series[matchIndex] = { ...series[matchIndex], ...candle };
+        } else {
+          series.push(candle);
+        }
+        series.sort((left, right) => Number(left.open_time) - Number(right.open_time));
+        if (series.length > 240) {
+          series.splice(0, series.length - 240);
+        }
+        liveMarketState.series[interval] = series;
+      }
+
+      function teardownLiveWebsocket() {
+        if (liveMarketState.reconnectTimer) {
+          clearTimeout(liveMarketState.reconnectTimer);
+          liveMarketState.reconnectTimer = null;
+        }
+        if (liveMarketState.websocket) {
+          const socket = liveMarketState.websocket;
+          liveMarketState.websocket = null;
+          socket.onopen = null;
+          socket.onmessage = null;
+          socket.onerror = null;
+          socket.onclose = null;
+          socket.close();
+        }
+      }
+
+      function connectLiveWebsocket(symbol) {
+        teardownLiveWebsocket();
+        const streams = LIVE_INTERVALS.map((interval) => `${symbol.toLowerCase()}@kline_${interval}`).join("/");
+        const socket = new WebSocket(`wss://fstream.binance.com/stream?streams=${streams}`);
+        liveMarketState.websocket = socket;
+        setStreamStatus("connecting", "Connecting...");
+        streamMeta.textContent = `Connecting Binance Futures websocket for ${symbol} on 5m, 15m, and 1h.`;
+
+        socket.onopen = () => {
+          liveMarketState.reconnectAttempts = 0;
+          setStreamStatus("live", "Live");
+          streamMeta.textContent = `Streaming ${symbol} directly from Binance Futures websocket across 5m, 15m, and 1h.`;
+        };
+
+        socket.onmessage = (event) => {
+          const payload = JSON.parse(event.data);
+          const kline = payload?.data?.k;
+          if (!kline || !kline.i) return;
+
+          liveMarketState.lastStreamAt = Date.now();
+          upsertStreamCandle(kline.i, normalizeWebsocketCandle(kline));
+          refreshLiveStats();
+          renderPatternCards();
+          if (kline.i === liveMarketState.activeInterval) {
+            renderLiveChart();
+          }
+          streamMeta.textContent = `Websocket live for ${symbol}. Last ${kline.i} update at ${new Date().toLocaleTimeString()}.`;
+        };
+
+        socket.onerror = () => {
+          setStreamStatus("error", "Stream issue");
+          streamMeta.textContent = `Binance websocket reported an error for ${symbol}. Retrying shortly.`;
+        };
+
+        socket.onclose = () => {
+          if (pairSelect.value !== symbol) return;
+          liveMarketState.websocket = null;
+          liveMarketState.reconnectAttempts += 1;
+          const retryDelay = Math.min(15000, 1500 * liveMarketState.reconnectAttempts);
+          setStreamStatus("connecting", "Reconnecting...");
+          streamMeta.textContent = `Websocket disconnected for ${symbol}. Reconnecting in ${(retryDelay / 1000).toFixed(1)}s.`;
+          liveMarketState.reconnectTimer = setTimeout(() => connectLiveWebsocket(symbol), retryDelay);
+        };
+      }
+
+      async function initializeLiveDashboard() {
+        const symbol = pairSelect.value;
+        const loadToken = Date.now();
+        teardownLiveWebsocket();
+        liveMarketState.symbol = symbol;
+        liveMarketState.activeInterval = chartIntervalSelect.value;
+        liveMarketState.loadToken = loadToken;
+        liveMarketState.latestMarketMetrics = null;
+        LIVE_INTERVALS.forEach((interval) => {
+          liveMarketState.series[interval] = [];
+        });
+        setStreamStatus("connecting", "Loading...");
+        streamMeta.textContent = `Fetching seed candles for ${symbol} before attaching the live stream.`;
+        refreshLiveStats();
+        renderPatternCards();
+        renderEmptyLiveChart("Loading Binance candles...");
+        renderEmptyIndicatorChart("Loading RSI and MACD...");
+
+        try {
+          const responses = await Promise.all(
+            LIVE_INTERVALS.map((interval) => fetch(`/market/candles?symbol=${symbol}&interval=${interval}&limit=180`))
+          );
+          if (responses.some((response) => !response.ok)) {
+            throw new Error("Could not fetch historical candles");
+          }
+
+          const payloads = await Promise.all(responses.map((response) => response.json()));
+          if (liveMarketState.loadToken !== loadToken || pairSelect.value !== symbol) {
+            return;
+          }
+          LIVE_INTERVALS.forEach((interval, index) => {
+            liveMarketState.series[interval] = (payloads[index].candles || []).map(normalizeHistoricalCandle);
+          });
+          liveMarketState.lastStreamAt = null;
+          refreshLiveStats();
+          renderPatternCards();
+          renderLiveChart();
+          connectLiveWebsocket(symbol);
+        } catch (error) {
+          teardownLiveWebsocket();
+          setStreamStatus("error", "Offline");
+          streamMeta.textContent = `Live dashboard error: ${error.message}`;
+          renderEmptyLiveChart("Unable to load Binance candles.");
+          renderEmptyIndicatorChart("Unable to load indicator data.");
+          renderPatternCards();
+        }
       }
 
       function updateCumulativeStats() {
@@ -680,6 +2768,36 @@
         cumProfit.textContent = numFmt.format(profitSum);
         cumLoss.textContent = numFmt.format(lossSum);
         cumNet.textContent = numFmt.format(profitSum + lossSum);
+      }
+
+      function renderAutoRefreshStatus() {
+        return;
+      }
+
+      function clearAutoRefreshTimers() {
+        if (autoTimer) {
+          clearTimeout(autoTimer);
+          autoTimer = null;
+        }
+        if (ttlTimer) {
+          clearInterval(ttlTimer);
+          ttlTimer = null;
+        }
+      }
+
+      function scheduleAutoRefresh(expiresAt) {
+        latestSignalExpiry = Number(expiresAt || 0) || null;
+        clearAutoRefreshTimers();
+        renderAutoRefreshStatus();
+        if (!autoRefresh.checked || !latestSignalExpiry) {
+          return;
+        }
+
+        const delayMs = Math.max(1000, latestSignalExpiry - Date.now() + 250);
+        autoTimer = setTimeout(() => {
+          loadDashboard();
+        }, delayMs);
+        ttlTimer = setInterval(renderAutoRefreshStatus, 1000);
       }
 
       function closeBehaviorModal() {
@@ -920,19 +3038,31 @@
         modal.classList.add("active");
       }
 
-      function renderTradeRows(trades) {
+      function shortenText(value, maxLen = 120) {
+        const text = String(value || "-");
+        if (text.length <= maxLen) return text;
+        return `${text.slice(0, maxLen - 1)}…`;
+      }
+
+      function renderTradeRows(targetBody, trades, emptyMessage, colspan) {
         if (!Array.isArray(trades) || trades.length === 0) {
-          backtestTradeRows.innerHTML = '<tr><td colspan="10" style="color:#8ca3c7;">No trades for this run.</td></tr>';
+          targetBody.innerHTML = `<tr><td colspan="${colspan}" style="color:#8ca3c7;">${emptyMessage}</td></tr>`;
           return;
         }
 
-        backtestTradeRows.innerHTML = trades
+        const orderedTrades = [...trades].sort((a, b) => Number(b.exit_time || 0) - Number(a.exit_time || 0));
+
+        targetBody.innerHTML = orderedTrades
           .map((trade, idx) => {
             const pnlClass = trade.net_pnl >= 0 ? "pnl-pos" : "pnl-neg";
             return `
               <tr>
                 <td>${idx + 1}</td>
+                <td>${trade.run_id ? trade.run_id.slice(0, 8) : "-"}</td>
                 <td>${trade.side}</td>
+                <td>${trade.entry_signal_direction || trade.side || "-"}</td>
+                <td>${trade.entry_signal_quality || "-"}</td>
+                <td>${trade.signal_horizon || "-"}</td>
                 <td>${trade.entry_time_local || "-"}</td>
                 <td>${trade.exit_time_local || "-"}</td>
                 <td>${Number(trade.duration_minutes || 0).toFixed(2)}</td>
@@ -940,11 +3070,429 @@
                 <td>${numFmt.format(trade.exit_price)}</td>
                 <td class="${pnlClass}">${numFmt.format(trade.net_pnl)}</td>
                 <td class="${pnlClass}">${Number(trade.roi_pct || 0).toFixed(2)}%</td>
-                <td>${trade.reason}</td>
+                <td>${trade.signal_source || "-"}</td>
+                <td title="${String(trade.entry_reason || "-")}">${shortenText(trade.entry_reason || "-")}</td>
+                <td title="${String(trade.exit_reason || trade.reason || "-")}">${shortenText(trade.exit_reason || trade.reason || "-")}</td>
               </tr>
             `;
           })
           .join("");
+      }
+
+      function clearPaperBotTimer() {
+        if (paperBotTimer) {
+          clearTimeout(paperBotTimer);
+          paperBotTimer = null;
+        }
+      }
+
+      function renderPaperBotStatus(status) {
+        const running = Boolean(status && status.running);
+        paperSessionState.textContent = running ? "RUNNING" : "IDLE";
+        paperModeValue.textContent = String(status?.mode || "BALANCED");
+        paperCapital.textContent = numFmt.format(status?.current_capital || 0);
+        paperRealized.textContent = numFmt.format(status?.realized_pnl || 0);
+        paperUnrealized.textContent = numFmt.format(status?.unrealized_pnl || 0);
+        paperTrades.textContent = String(status?.total_trades || 0);
+        paperWinRate.textContent = `${((status?.win_rate || 0) * 100).toFixed(1)}%`;
+        startPaperBotBtn.disabled = running;
+        stopPaperBotBtn.disabled = !running;
+
+        const openPosition = status?.open_position;
+        const signal = status?.last_signal;
+        const positionSummary = openPosition
+          ? {
+              side: openPosition.side,
+              entry_time: openPosition.entry_time_local,
+              entry_price: openPosition.entry_price,
+              leverage: openPosition.leverage,
+              current_price: openPosition.current_price,
+              liquidation_price: openPosition.liquidation_price,
+              tp_price: openPosition.tp_price,
+              sl_price: openPosition.sl_price,
+              unrealized_pnl: openPosition.unrealized_pnl,
+              unrealized_roi_pct: openPosition.unrealized_roi_pct,
+              entry_reason: openPosition.entry_reason
+            }
+          : "No open position.";
+        const signalSummary = signal
+          ? {
+              direction: signal.direction,
+              confidence: signal.confidence,
+              signal_quality: signal.signal_quality,
+              horizon: signal.horizon,
+              reasons: signal.reasons
+            }
+          : "No recent signal.";
+        paperBotOpenPosition.textContent = JSON.stringify(
+          { open_position: positionSummary, last_signal: signalSummary },
+          null,
+          2
+        );
+        paperLiveSide.textContent = openPosition?.side || "-";
+        setDirectionClass(paperLiveSide, openPosition?.side || "FLAT");
+        paperLiveEntry.textContent = openPosition ? numFmt.format(openPosition.entry_price) : "-";
+        paperLiveCurrent.textContent = openPosition ? numFmt.format(openPosition.current_price) : "-";
+        paperLivePnl.textContent = openPosition ? numFmt.format(openPosition.unrealized_pnl) : "-";
+        paperLiveRoi.textContent = openPosition ? `${Number(openPosition.unrealized_roi_pct || 0).toFixed(2)}%` : "-";
+        paperLiveLiq.textContent = openPosition?.liquidation_price ? numFmt.format(openPosition.liquidation_price) : "N/A";
+        paperLiveTp.textContent = openPosition ? numFmt.format(openPosition.tp_price) : "-";
+        paperLiveSl.textContent = openPosition ? numFmt.format(openPosition.sl_price) : "-";
+        const paperTradesToRender = [...(status?.recent_trades || [])];
+        if (openPosition) {
+          const openDurationMinutes = Math.max(
+            0,
+            ((status?.last_updated_at || Date.now()) - Number(openPosition.entry_time || 0)) / 60000
+          );
+          paperTradesToRender.unshift({
+            run_id: status?.session_id || "-",
+            side: openPosition.side,
+            entry_signal_direction: openPosition.side,
+            entry_signal_quality: openPosition.entry_signal_quality,
+            signal_horizon: openPosition.signal_horizon,
+            entry_time_local: openPosition.entry_time_local,
+            exit_time_local: "OPEN",
+            exit_time: Number.MAX_SAFE_INTEGER,
+            duration_minutes: openDurationMinutes,
+            entry_price: openPosition.entry_price,
+            exit_price: openPosition.current_price,
+            net_pnl: openPosition.unrealized_pnl,
+            roi_pct: openPosition.unrealized_roi_pct,
+            signal_source: openPosition.signal_source,
+            entry_reason: openPosition.entry_reason,
+            exit_reason: "OPEN POSITION"
+          });
+        }
+        renderTradeRows(
+          paperTradeRows,
+          paperTradesToRender,
+          "No paper bot trades yet.",
+          16
+        );
+
+        const scheduleLabel = status?.scheduled_end_at
+          ? new Date(status.scheduled_end_at).toLocaleString()
+          : "until stopped";
+        paperBotMeta.textContent = running
+          ? `Paper bot running for ${status.symbol}. Poll=${status.poll_interval_seconds}s, scheduled end=${scheduleLabel}, last action=${status.last_action || "monitoring"}.`
+          : `Paper bot idle. Last action=${status?.last_action || "idle"}.`;
+      }
+
+      async function loadBacktestTradeHistory() {
+        try {
+          const symbol = pairSelect.value;
+          const response = await fetch(`/bot/backtest/trades?symbol=${symbol}&limit=200`);
+          if (!response.ok) return;
+          const trades = await response.json();
+          cumulativeTrades = trades;
+          updateCumulativeStats();
+          renderTradeRows(backtestTradeRows, cumulativeTrades, "No trades yet.", 15);
+        } catch (_error) {
+        }
+      }
+
+      async function loadPaperBotStatus() {
+        clearPaperBotTimer();
+        try {
+          const symbol = pairSelect.value;
+          const response = await fetch(`/bot/paper/status?symbol=${symbol}`);
+          if (!response.ok) {
+            throw new Error("Live paper bot status request failed");
+          }
+          const status = await response.json();
+          renderPaperBotStatus(status);
+          if (status.running) {
+            paperBotTimer = setTimeout(loadPaperBotStatus, 5000);
+          }
+        } catch (error) {
+          paperBotMeta.textContent = `Paper bot status error: ${error.message}`;
+        }
+      }
+
+      async function startPaperBot() {
+        startPaperBotBtn.disabled = true;
+        paperBotMeta.textContent = "Starting paper bot...";
+        try {
+          const symbol = pairSelect.value;
+          const runMinutes = Number(paperRunMinutesSelect.value || 60);
+          const pollSeconds = Number(paperPollSecondsSelect.value || 30);
+          const mode = encodeURIComponent(String(paperModeSelect.value || "BALANCED"));
+          const leverage = Number(paperLeverageSelect.value || 3);
+          const url = `/bot/paper/start?symbol=${symbol}&run_minutes=${runMinutes}&poll_interval_seconds=${pollSeconds}&initial_capital=1000&fee_rate=0.0004&leverage=${leverage}&use_cumulative_signal=${paperUseCumulativeSignal.checked}&use_htf_filter=${paperUseHtfFilter.checked}&use_volume_filter=${paperUseVolumeFilter.checked}&mode=${mode}`;
+          const response = await fetch(url, { method: "POST" });
+          if (!response.ok) {
+            throw new Error("Live paper bot start failed");
+          }
+          const status = await response.json();
+          renderPaperBotStatus(status);
+          paperBotTimer = setTimeout(loadPaperBotStatus, 3000);
+        } catch (error) {
+          paperBotMeta.textContent = `Paper bot start error: ${error.message}`;
+          startPaperBotBtn.disabled = false;
+        }
+      }
+
+      async function stopPaperBot() {
+        stopPaperBotBtn.disabled = true;
+        paperBotMeta.textContent = "Stopping paper bot...";
+        clearPaperBotTimer();
+        try {
+          const response = await fetch(`/bot/paper/stop`, { method: "POST" });
+          if (!response.ok) {
+            throw new Error("Live paper bot stop failed");
+          }
+          const status = await response.json();
+          renderPaperBotStatus(status);
+        } catch (error) {
+          paperBotMeta.textContent = `Paper bot stop error: ${error.message}`;
+        }
+      }
+
+      function clearBybitDemoBotTimer() {
+        if (bybitDemoBotTimer) {
+          clearTimeout(bybitDemoBotTimer);
+          bybitDemoBotTimer = null;
+        }
+      }
+
+      function renderBybitDemoConfigStatus(configStatus) {
+        bybitDemoConfigStateCache = configStatus || bybitDemoConfigStateCache;
+        const configured = Boolean(configStatus?.configured);
+        const aiConfigured = Boolean(configStatus?.ai_configured);
+        bybitDemoConfigState.textContent = configured ? "READY" : "MISSING";
+        bybitDemoAiState.textContent = configStatus?.ai_enabled ? "ACTIVE" : (aiConfigured ? "READY" : "OFF");
+        bybitDemoAiModel.textContent = String(configStatus?.ai_model || "-");
+        bybitDemoConfigMeta.textContent = configStatus
+          ? `${configStatus.message} Source=${configStatus.config_source || "defaults"} | Path=${configStatus.config_path || "runtime/bybit_demo_config.json"} | AI=${configStatus.ai_message || "disabled"}`
+          : "Unable to load Bybit demo config status.";
+        const running = bybitDemoSessionState.textContent === "RUNNING";
+        startBybitDemoBotBtn.disabled = running || !configured;
+      }
+
+      async function loadBybitDemoBotConfig() {
+        try {
+          const response = await fetch(`/bot/demo/bybit/config`);
+          if (!response.ok) {
+            const detail = await response.text();
+            throw new Error(`Bybit demo config request failed (${response.status}). ${detail || "Restart the API server if routes were just changed."}`);
+          }
+          const configStatus = await response.json();
+          renderBybitDemoConfigStatus(configStatus);
+        } catch (error) {
+          bybitDemoConfigState.textContent = "ERROR";
+          bybitDemoConfigMeta.textContent = `Bybit demo config error: ${error.message}`;
+          startBybitDemoBotBtn.disabled = true;
+        }
+      }
+
+      function renderBybitDemoPerformance(performance) {
+        bybitDemoPerformanceCache = performance || null;
+        const summary = performance?.summary || {};
+        bybitDemoPerfTrades.textContent = String(summary.total_trades || 0);
+        bybitDemoPerfWinRate.textContent = `${((summary.win_rate || 0) * 100).toFixed(1)}%`;
+        bybitDemoPerfNet.textContent = numFmt.format(summary.net_pnl || 0);
+        bybitDemoPerfAvgRoi.textContent = `${Number(summary.avg_roi_pct || 0).toFixed(2)}%`;
+        bybitDemoPerfBest.textContent = numFmt.format(summary.best_trade_pnl || 0);
+        bybitDemoPerfWorst.textContent = numFmt.format(summary.worst_trade_pnl || 0);
+        bybitDemoPerfFactor.textContent = summary.profit_factor ? Number(summary.profit_factor).toFixed(2) : "-";
+        bybitDemoPerfLastTrade.textContent = summary.last_trade_at
+          ? new Date(summary.last_trade_at).toLocaleString()
+          : "-";
+      }
+
+      async function loadBybitDemoPerformance(symbol) {
+        try {
+          if (!bybitDemoConfigStateCache?.configured) {
+            renderBybitDemoPerformance(null);
+            return;
+          }
+          const response = await fetch(`/bot/demo/bybit/performance?symbol=${symbol}&limit=50`);
+          if (!response.ok) {
+            const detail = await response.text();
+            throw new Error(`Bybit demo performance request failed (${response.status}). ${detail || "Unable to load performance."}`);
+          }
+          const performance = await response.json();
+          renderBybitDemoPerformance(performance);
+        } catch (error) {
+          bybitDemoPerformanceCache = null;
+          bybitDemoPerfTrades.textContent = "0";
+          bybitDemoPerfWinRate.textContent = "0.0%";
+          bybitDemoPerfNet.textContent = "0.00";
+          bybitDemoPerfAvgRoi.textContent = "0.00%";
+          bybitDemoPerfBest.textContent = "0.00";
+          bybitDemoPerfWorst.textContent = "0.00";
+          bybitDemoPerfFactor.textContent = "-";
+          bybitDemoPerfLastTrade.textContent = "-";
+          bybitDemoBotMeta.textContent = `Bybit demo performance error: ${error.message}`;
+        }
+      }
+
+      function renderBybitDemoBotStatus(status) {
+        const running = Boolean(status && status.running);
+        bybitDemoSessionState.textContent = running ? "RUNNING" : "IDLE";
+        bybitDemoModeValue.textContent = String(status?.mode || "BALANCED");
+        bybitDemoAiState.textContent = status?.ai_enabled ? "ACTIVE" : (bybitDemoConfigStateCache?.ai_configured ? "READY" : "OFF");
+        bybitDemoAiModel.textContent = String(status?.ai_model || bybitDemoConfigStateCache?.ai_model || "-");
+        bybitDemoAvailable.textContent = numFmt.format(status?.available_balance || 0);
+        bybitDemoWallet.textContent = numFmt.format(status?.wallet_balance || 0);
+        bybitDemoEquity.textContent = numFmt.format(status?.account_equity || 0);
+        bybitDemoTrades.textContent = String(status?.total_trades || 0);
+        bybitDemoLastAction.textContent = String(status?.last_action || "idle");
+        stopBybitDemoBotBtn.disabled = !running;
+        startBybitDemoBotBtn.disabled = running || !Boolean(bybitDemoConfigStateCache?.configured);
+        startBybitDemoBotBtn.textContent = running ? "Bot Running" : "Start Bybit Demo Bot";
+
+        const openPosition = status?.open_position;
+        const signal = status?.last_signal;
+        const aiDecision = status?.ai_last_decision || null;
+        bybitDemoSignalDirection.textContent = signal?.direction || "-";
+        setDirectionClass(bybitDemoSignalDirection, signal?.direction || "FLAT");
+        bybitDemoSignalConfidence.textContent = signal ? `${(Number(signal.confidence || 0) * 100).toFixed(1)}%` : "-";
+        bybitDemoSignalQuality.textContent = signal?.signal_quality || "-";
+        bybitDemoSignalHorizon.textContent = signal?.horizon || "-";
+        const positionSummary = openPosition
+          ? {
+              side: openPosition.side,
+              size: openPosition.size,
+              entry_price: openPosition.entry_price,
+              mark_price: openPosition.mark_price,
+              leverage: openPosition.leverage,
+              take_profit: openPosition.take_profit,
+              stop_loss: openPosition.stop_loss,
+              liquidation_price: openPosition.liquidation_price,
+              liquidation_buffer_pct: openPosition.liquidation_buffer_pct,
+              position_value: openPosition.position_value,
+              unrealized_pnl: openPosition.unrealized_pnl,
+              unrealized_roi_pct: openPosition.unrealized_roi_pct
+            }
+          : "No exchange position.";
+        const signalSummary = signal
+          ? {
+              direction: signal.direction,
+              confidence: signal.confidence,
+              signal_quality: signal.signal_quality,
+              horizon: signal.horizon,
+              reasons: signal.reasons
+            }
+          : "No recent signal.";
+        bybitDemoOpenPosition.textContent = JSON.stringify(
+          { open_position: positionSummary, last_signal: signalSummary, ai_decision: aiDecision, last_error: status?.last_error || null },
+          null,
+          2
+        );
+
+        bybitDemoLiveSide.textContent = openPosition?.side || "-";
+        setDirectionClass(bybitDemoLiveSide, openPosition?.side || "FLAT");
+        bybitDemoLiveSize.textContent = openPosition ? numFmt.format(openPosition.size) : "-";
+        bybitDemoLiveEntry.textContent = openPosition ? numFmt.format(openPosition.entry_price) : "-";
+        bybitDemoLiveMark.textContent = openPosition ? numFmt.format(openPosition.mark_price) : "-";
+        bybitDemoLiveValue.textContent = openPosition ? numFmt.format(openPosition.position_value) : "-";
+        bybitDemoLivePnl.textContent = openPosition ? numFmt.format(openPosition.unrealized_pnl) : "-";
+        bybitDemoLiveRoi.textContent = openPosition ? `${Number(openPosition.unrealized_roi_pct || 0).toFixed(2)}%` : "-";
+        bybitDemoLiveTpsl.textContent = openPosition
+          ? `${openPosition.take_profit ? numFmt.format(openPosition.take_profit) : "N/A"} / ${openPosition.stop_loss ? numFmt.format(openPosition.stop_loss) : "N/A"}`
+          : "-";
+
+        const tradesToRender = [...(bybitDemoPerformanceCache?.trades || [])];
+        if (openPosition) {
+          tradesToRender.unshift({
+            run_id: status?.session_id || "-",
+            side: openPosition.side,
+            entry_signal_direction: signal?.direction || openPosition.side,
+            entry_signal_quality: signal?.signal_quality || "-",
+            signal_horizon: signal?.horizon || "-",
+            entry_time_local: openPosition.opened_at ? new Date(openPosition.opened_at).toLocaleString() : "-",
+            exit_time_local: "OPEN",
+            exit_time: Number.MAX_SAFE_INTEGER,
+            duration_minutes: openPosition.opened_at ? Math.max(0, ((status?.last_updated_at || Date.now()) - Number(openPosition.opened_at)) / 60000) : 0,
+            entry_price: openPosition.entry_price,
+            exit_price: openPosition.mark_price,
+            net_pnl: openPosition.unrealized_pnl,
+            roi_pct: openPosition.unrealized_roi_pct,
+            signal_source: status?.signal_source || "bybit_demo_live_bot",
+            entry_reason: "live_exchange_position",
+            exit_reason: "OPEN POSITION"
+          });
+        }
+        renderTradeRows(bybitDemoTradeRows, tradesToRender, "No Bybit demo trades yet.", 16);
+
+        const cooldownLabel = status?.cooldown_until
+          ? ` Cooldown until ${new Date(status.cooldown_until).toLocaleString()}.`
+          : "";
+        const aiLabel = aiDecision?.reason ? ` AI=${aiDecision.reason}` : "";
+        bybitDemoBotMeta.textContent = running
+          ? `Bybit demo bot running for ${status.symbol}. Poll=${status.poll_interval_seconds}s, last action=${status.last_action || "monitoring"}.${cooldownLabel}${aiLabel}`
+          : `Bybit demo bot idle. Last action=${status?.last_action || "idle"}.${cooldownLabel}${aiLabel}`;
+      }
+
+      async function loadBybitDemoBotStatus() {
+        clearBybitDemoBotTimer();
+        await loadBybitDemoBotConfig();
+        try {
+          const symbol = pairSelect.value;
+          await loadBybitDemoPerformance(symbol);
+          const response = await fetch(`/bot/demo/bybit/status?symbol=${symbol}`);
+          if (!response.ok) {
+            const detail = await response.text();
+            throw new Error(`Bybit demo bot status request failed (${response.status}). ${detail || "Restart the API server if routes were just changed."}`);
+          }
+          const status = await response.json();
+          renderBybitDemoBotStatus(status);
+          if (status.running) {
+            bybitDemoBotTimer = setTimeout(loadBybitDemoBotStatus, 5000);
+          }
+        } catch (error) {
+          bybitDemoBotMeta.textContent = `Bybit demo bot status error: ${error.message}`;
+        }
+      }
+
+      async function startBybitDemoBot() {
+        if (startBybitDemoBotBtn.disabled) {
+          return;
+        }
+        startBybitDemoBotBtn.disabled = true;
+        startBybitDemoBotBtn.textContent = "Starting...";
+        bybitDemoBotMeta.textContent = "Starting Bybit demo bot...";
+        try {
+          const symbol = pairSelect.value;
+          const pollSeconds = Number(bybitDemoPollSecondsSelect.value || 5);
+          const mode = encodeURIComponent(String(bybitDemoModeSelect.value || "BALANCED"));
+          const leverage = Number(bybitDemoLeverageSelect.value || 2);
+          const risk = Number(bybitDemoRiskSelect.value || 0.01);
+          const maxMargin = Number(bybitDemoMarginSelect.value || 0.35);
+          const cooldown = Number(bybitDemoCooldownSelect.value || 30);
+          const url = `/bot/demo/bybit/start?symbol=${symbol}&poll_interval_seconds=${pollSeconds}&leverage=${leverage}&risk_per_trade_pct=${risk}&max_margin_fraction=${maxMargin}&cooldown_seconds=${cooldown}&mode=${mode}`;
+          const response = await fetch(url, { method: "POST" });
+          if (!response.ok) {
+            const detail = await response.text();
+            throw new Error(detail || "Bybit demo bot start failed");
+          }
+          const status = await response.json();
+          renderBybitDemoBotStatus(status);
+          bybitDemoBotTimer = setTimeout(loadBybitDemoBotStatus, 3000);
+        } catch (error) {
+          bybitDemoBotMeta.textContent = `Bybit demo bot start error: ${error.message}`;
+          startBybitDemoBotBtn.disabled = !Boolean(bybitDemoConfigStateCache?.configured);
+          startBybitDemoBotBtn.textContent = "Start Bybit Demo Bot";
+        }
+      }
+
+      async function stopBybitDemoBot() {
+        stopBybitDemoBotBtn.disabled = true;
+        bybitDemoBotMeta.textContent = "Stopping Bybit demo bot...";
+        clearBybitDemoBotTimer();
+        try {
+          const response = await fetch(`/bot/demo/bybit/stop?close_position=true`, { method: "POST" });
+          if (!response.ok) {
+            throw new Error("Bybit demo bot stop failed");
+          }
+          const status = await response.json();
+          renderBybitDemoBotStatus(status);
+        } catch (error) {
+          bybitDemoBotMeta.textContent = `Bybit demo bot stop error: ${error.message}`;
+        } finally {
+          startBybitDemoBotBtn.textContent = "Start Bybit Demo Bot";
+        }
       }
 
       function normalizeLiquidityAmounts(rawSlices, openInterestValue) {
@@ -952,15 +3500,130 @@
         const oi = Number(openInterestValue || 0);
         return rawSlices.map((slice) => {
           const total = slice.reduce((acc, value) => acc + Number(value || 0), 0);
-          if (total <= 0 || oi <= 0) {
+          if (total <= 0) {
             return slice.map(() => 0);
+          }
+          if (oi <= 0) {
+            return slice.map((value) => Number(value || 0));
           }
           return slice.map((value) => (Number(value || 0) / total) * oi);
         });
       }
 
-      function buildHeatmap(candles, liq, tile) {
-        const sourceTile = tile || {
+      function buildNormalizedSurface(amountSlices) {
+        const flatPositive = amountSlices.flat().map((value) => Number(value || 0)).filter((value) => value > 0);
+        if (!flatPositive.length) {
+          return amountSlices.map((slice) => slice.map(() => 0));
+        }
+        const logValues = flatPositive.map((value) => Math.log1p(value));
+        const floor = quantile(logValues, 0.2);
+        const ceiling = quantile(logValues, 0.985);
+        const span = Math.max(ceiling - floor, 1e-9);
+        return amountSlices.map((slice) =>
+          slice.map((value) => {
+            const numeric = Number(value || 0);
+            if (numeric <= 0) return 0;
+            return clamp((Math.log1p(numeric) - floor) / span, 0, 1);
+          })
+        );
+      }
+
+      function buildLiquidationBandTraces(x, yBins, amountSlices, priceDigits) {
+        const normalizedSlices = buildNormalizedSurface(amountSlices);
+        if (!x.length || !yBins.length) {
+          return {
+            traces: [],
+            maxAmount: Math.max(...amountSlices.flat().map((value) => Number(value || 0)), 0)
+          };
+        }
+        const flatNorm = normalizedSlices.flat().filter((value) => value > 0);
+        const globalThreshold = flatNorm.length ? quantile(flatNorm, 0.76) : 0.5;
+        const colorStops = [
+          [0, [82, 17, 122]],
+          [0.42, [37, 122, 177]],
+          [0.72, [67, 195, 106]],
+          [1, [248, 248, 0]]
+        ];
+        const traces = [];
+
+        traces.push({
+          type: "heatmap",
+          x,
+          y: yBins,
+          z: yBins.map((_, priceIdx) => normalizedSlices.map((slice) => slice[priceIdx] ?? 0)),
+          zmin: 0,
+          zmax: 1,
+          showscale: false,
+          hoverinfo: "skip",
+          opacity: 0.18,
+          colorscale: [
+            [0, "rgba(76, 15, 101, 0.94)"],
+            [0.45, "rgba(39, 95, 154, 0.96)"],
+            [0.72, "rgba(47, 170, 127, 0.98)"],
+            [1, "rgba(248, 248, 0, 1)"]
+          ]
+        });
+
+        for (let priceIdx = 0; priceIdx < yBins.length; priceIdx += 1) {
+          const rowRaw = amountSlices.map((slice) => Number(slice?.[priceIdx] || 0));
+          const rowNorm = normalizedSlices.map((slice) => Number(slice?.[priceIdx] || 0));
+          const rowPeak = Math.max(...rowNorm, 0);
+          const rowThreshold = Math.max(globalThreshold * 0.72, rowPeak * 0.46, 0.22);
+          if (rowPeak < rowThreshold) continue;
+
+          let startIndex = -1;
+          let peakNorm = 0;
+          let peakAmount = 0;
+
+          for (let timeIdx = 0; timeIdx <= rowNorm.length; timeIdx += 1) {
+            const activeValue = timeIdx < rowNorm.length ? rowNorm[timeIdx] : 0;
+            const active = timeIdx < rowNorm.length && activeValue >= rowThreshold;
+
+            if (active) {
+              if (startIndex === -1) startIndex = timeIdx;
+              peakNorm = Math.max(peakNorm, activeValue);
+              peakAmount = Math.max(peakAmount, rowRaw[timeIdx] || 0);
+              continue;
+            }
+
+            if (startIndex === -1) continue;
+
+            const endIndex = Math.max(startIndex, timeIdx - 1);
+            const lineEndIndex = Math.min(endIndex + (endIndex === startIndex ? 1 : 0), x.length - 1);
+            traces.push({
+              type: "scatter",
+              mode: "lines",
+              x: [x[startIndex], x[lineEndIndex]],
+              y: [yBins[priceIdx], yBins[priceIdx]],
+              customdata: [peakAmount, peakAmount],
+              hovertemplate: `Price: %{y:.${priceDigits}f}<br>Est. density: $%{customdata:,.0f}<br>Time: %{x}<extra></extra>`,
+              line: {
+                color: interpolateRgb(colorStops, peakNorm),
+                width: 1.6 + peakNorm * 4.8
+              },
+              opacity: 0.96,
+              showlegend: false
+            });
+
+            startIndex = -1;
+            peakNorm = 0;
+            peakAmount = 0;
+          }
+        }
+
+        return {
+          traces,
+          maxAmount: Math.max(...amountSlices.flat().map((value) => Number(value || 0)), 0)
+        };
+      }
+
+      function updateLiquidationScale(maxAmount) {
+        liqScaleTop.textContent = maxAmount > 0 ? `${compactFmt.format(maxAmount)}` : "0";
+        liqScaleBottom.textContent = "0";
+      }
+
+      function buildHeatmap(candles, liq) {
+        const sourceTile = {
           time_axis: liq.heatmap.map((row) => row.timestamp),
           price_levels: liq.heatmap_price_levels,
           total_intensity: liq.heatmap.map((row) => row.total_intensity)
@@ -970,29 +3633,9 @@
         const yBins = sourceTile.price_levels || [];
         const rawSlices = sourceTile.total_intensity || [];
         const amountSlices = normalizeLiquidityAmounts(rawSlices, liq?.market_metrics?.open_interest_value);
-        const z = yBins.map((_, yIdx) => amountSlices.map((row) => row[yIdx] ?? 0));
-
-        const heatmap = {
-          type: "heatmap",
-          x,
-          y: yBins,
-          z,
-          colorscale: [
-            [0, "#123c8c"],
-            [0.35, "#1d72c9"],
-            [0.55, "#22c55e"],
-            [0.78, "#84cc16"],
-            [1, "#fde047"]
-          ],
-          showscale: true,
-          colorbar: {
-            thickness: 12,
-            tickfont: { color: "#c8ddff" },
-            title: { text: "Est. Liquidity", font: { color: "#c8ddff" } }
-          },
-          hovertemplate: "Time: %{x}<br>Price: %{y:.2f}<br>Est. liquidity: $%{z:,.0f}<extra></extra>",
-          opacity: 0.92
-        };
+        const priceDigits = getPriceDecimals(liq?.current_price);
+        const bandSurface = buildLiquidationBandTraces(x, yBins, amountSlices, priceDigits);
+        updateLiquidationScale(bandSurface.maxAmount);
 
         const candleTrace = {
           type: "candlestick",
@@ -1001,10 +3644,19 @@
           high: candles.map((c) => c.high),
           low: candles.map((c) => c.low),
           close: candles.map((c) => c.close),
-          increasing: { line: { color: "#2dd4bf", width: 1.1 } },
-          decreasing: { line: { color: "#fb7185", width: 1.1 } },
+          increasing: {
+            line: { color: "#15e3a1", width: 1.2 },
+            fillcolor: "#15e3a1"
+          },
+          decreasing: {
+            line: { color: "#ff617d", width: 1.2 },
+            fillcolor: "#ff617d"
+          },
           whiskerwidth: 0.3,
-          hoverlabel: { bgcolor: "#0f172a" }
+          opacity: 0.92,
+          hoverlabel: { bgcolor: "#171c22" },
+          name: "Price",
+          showlegend: false
         };
 
         const eventMarkers = {
@@ -1013,62 +3665,83 @@
           x: (liq.events || []).map((event) => new Date(event.timestamp)),
           y: (liq.events || []).map((event) => event.price),
           text: (liq.events || []).map((event) => `${event.liquidated_side} ${numFmt.format(event.notional || 0)}`),
-          hovertemplate: "Liquidated: %{text}<br>Price: %{y:.2f}<extra></extra>",
+          hovertemplate: `Liquidated: %{text}<br>Price: %{y:.${priceDigits}f}<extra></extra>`,
           marker: {
-            size: (liq.events || []).map((event) => Math.max(7, Math.min(18, Math.sqrt(event.notional || 0) / 30))),
+            size: (liq.events || []).map((event) => Math.max(5, Math.min(13, Math.sqrt(event.notional || 0) / 60))),
             color: (liq.events || []).map((event) => event.liquidated_side === "LONG" ? "#22c55e" : "#f43f5e"),
-            line: { color: "#f8fafc", width: 0.8 },
-            opacity: 0.82
+            line: { color: "rgba(248, 250, 252, 0.68)", width: 0.6 },
+            opacity: 0.7
           },
-          name: "Events"
+          name: "Events",
+          showlegend: false
         };
 
-        const depthShapes = (liq.depth_bands || []).map((band) => ({
+        const recentWindowStart = x[Math.max(0, Math.floor(x.length * 0.65))] || x[0];
+        const levelLines = [...liq.levels_above, ...liq.levels_below].slice(0, 10).map((level) => ({
           type: "line",
-          x0: x[0],
-          x1: x[x.length - 1],
-          y0: band.price,
-          y1: band.price,
-          line: {
-            color: band.side === "BID" ? "rgba(34,197,94,0.22)" : "rgba(244,63,94,0.22)",
-            width: 1,
-            dash: "dot"
-          }
-        }));
-
-        const levelLines = [...liq.levels_above, ...liq.levels_below].map((level) => ({
-          type: "line",
-          x0: x[Math.max(0, x.length - Math.min(10, x.length))],
+          x0: recentWindowStart,
           x1: x[x.length - 1],
           y0: level.level_price,
           y1: level.level_price,
           line: {
-            color: level.side === "SHORT" ? "rgba(244,63,94,0.32)" : "rgba(34,197,94,0.32)",
-            width: 1.2
+            color: level.side === "SHORT" ? "rgba(248, 248, 0, 0.38)" : "rgba(76, 217, 100, 0.24)",
+            width: level.strength > 0.15 ? 2.2 : 1.3
           }
         }));
 
+        const currentPrice = Number(liq?.current_price || candles[candles.length - 1]?.close || 0);
+        const currentPriceLine = currentPrice > 0 && x.length ? [{
+          type: "line",
+          x0: x[0],
+          x1: x[x.length - 1],
+          y0: currentPrice,
+          y1: currentPrice,
+          line: {
+            color: "rgba(22, 192, 184, 0.48)",
+            width: 1.1,
+            dash: "dot"
+          }
+        }] : [];
+
         const layout = {
-          paper_bgcolor: "#0b122b",
-          plot_bgcolor: "#0b122b",
-          margin: { l: 54, r: 40, t: 12, b: 40 },
+          paper_bgcolor: "#171c22",
+          plot_bgcolor: "#55117a",
+          margin: { l: 10, r: 52, t: 10, b: 36 },
           xaxis: {
             showgrid: false,
-            color: "#c8ddff",
-            title: { text: "Time", font: { color: "#8ca3c7", size: 12 } }
+            color: "#b6c1d3",
+            tickfont: { size: 11 },
+            title: { text: "", font: { color: "#8ca3c7", size: 12 } },
+            rangeslider: { visible: false }
           },
           yaxis: {
             showgrid: false,
-            color: "#c8ddff",
-            tickformat: ",.0f",
+            zeroline: false,
+            color: "#d3dae6",
+            tickfont: { size: 11 },
+            tickformat: priceDigits > 0 ? `,.${priceDigits}f` : ",.0f",
             side: "right",
-            title: { text: "Price", font: { color: "#8ca3c7", size: 12 } }
+            title: { text: "", font: { color: "#8ca3c7", size: 12 } }
           },
-          shapes: [...depthShapes, ...levelLines],
+          shapes: [...levelLines, ...currentPriceLine],
+          annotations: currentPrice > 0 && x.length ? [{
+            x: x[x.length - 1],
+            y: currentPrice,
+            xanchor: "left",
+            yanchor: "middle",
+            xshift: 8,
+            text: formatPrice(currentPrice, priceDigits),
+            showarrow: false,
+            font: { color: "#9cf3e8", size: 11 },
+            bgcolor: "rgba(13, 148, 136, 0.22)",
+            bordercolor: "rgba(45, 212, 191, 0.35)",
+            borderwidth: 1,
+            borderpad: 4
+          }] : [],
           showlegend: false
         };
 
-        Plotly.newPlot("liqChart", [heatmap, candleTrace, eventMarkers], layout, {
+        Plotly.newPlot("liqChart", [...bandSurface.traces, candleTrace, eventMarkers], layout, {
           responsive: true,
           displayModeBar: false
         });
@@ -1080,59 +3753,46 @@
         refreshMeta.textContent = "Refreshing...";
 
         try {
+          const liqWindow = getLiquidationWindow();
           const liqRange = liqRangeSelect.value;
           const liqResolution = liqResolutionSelect.value;
-          const liqHistory = liqHistorySelect.value;
-          const [signalRes, explainRes, liqRes, tileRes, candleRes, behaviorRes] = await Promise.all([
+          const [signalRes, liqRes, candleRes, behaviorRes] = await Promise.all([
             fetch(`/signal?symbol=${symbol}`),
-            fetch(`/signal/explain?symbol=${symbol}`),
-            fetch(`/liquidation-map?symbol=${symbol}&range_pct=${liqRange}&resolution=${liqResolution}&history_points=${liqHistory}`),
-            fetch(`/liquidation/tiles?symbol=${symbol}&range_pct=${liqRange}&resolution=${liqResolution}`),
-            fetch(`/market/candles?symbol=${symbol}&interval=1m&limit=120`),
+            fetch(`/liquidation-map?symbol=${symbol}&range_pct=${liqRange}&resolution=${liqResolution}&history_points=${liqWindow.historyPoints}&candle_interval=${liqWindow.interval}&candle_limit=${liqWindow.candleLimit}`),
+            fetch(`/market/candles?symbol=${symbol}&interval=${liqWindow.interval}&limit=${liqWindow.candleLimit}`),
             fetch(`/market/behavior?symbol=${symbol}`)
           ]);
 
-          if (!signalRes.ok || !explainRes.ok || !liqRes.ok || !candleRes.ok) {
+          if (!signalRes.ok || !liqRes.ok || !candleRes.ok) {
             throw new Error("One or more API requests failed.");
           }
 
-          const signal = await signalRes.json();
-          const explain = await explainRes.json();
+          const signalPayload = await signalRes.json();
+          const explain = signalPayload.explain;
+          const signal = signalPayload.signal;
+          const cumulative = signalPayload.cumulative;
           const liq = await liqRes.json();
-          const tile = tileRes.ok ? await tileRes.json() : null;
           const candleData = await candleRes.json();
           const behavior = behaviorRes.ok ? await behaviorRes.json() : null;
 
           // Store market behavior for modal display
           window.marketBehaviorData = behavior;
 
-          directionValue.textContent = signal.direction;
-          setDirectionClass(directionValue, signal.direction);
-          confidenceValue.textContent = `${(signal.confidence * 100).toFixed(1)}%`;
-          methodValue.textContent = liq.methodology;
-          priceValue.textContent = numFmt.format(signal.current_price);
-          if (signal.direction === "FLAT") {
-            tpValue.textContent = "N/A (FLAT)";
-            slValue.textContent = "N/A (FLAT)";
-          } else {
-            tpValue.textContent = numFmt.format(signal.tp);
-            slValue.textContent = numFmt.format(signal.sl);
-          }
-          reasonsValue.textContent = `Reasons: ${signal.reasons.join(", ") || "-"}`;
+          scheduleAutoRefresh(signal.expires_at);
+          liveMarketState.latestMarketMetrics = liq.market_metrics || null;
+          renderCumulativeSignals(cumulative);
+          refreshLiveStats();
 
-          pullValue.textContent = liq.dominant_pull;
-          setDirectionClass(pullValue, liq.dominant_pull);
-          pullConfidence.textContent = `Dominance confidence: ${(liq.confidence * 100).toFixed(1)}%`;
-
-          explainJson.textContent = JSON.stringify(explain, null, 2);
-
-          buildHeatmap(candleData.candles, liq, tile);
+          liqTitle.textContent = `${inferAssetName(symbol)} Liquidation Heatmap (${liqWindow.label})`;
+          liqSubtitle.textContent = `Liquidation density bands estimated from Binance futures positioning, rendered over ${liqWindow.candleLimit} ${liqWindow.interval} candles for a cleaner market structure view.`;
+          buildHeatmap(candleData.candles, liq);
           const oiValue = Number(liq?.market_metrics?.open_interest_value || 0);
-          liqMeta.textContent = `Price range: ${numFmt.format(liq.price_range_low)} - ${numFmt.format(liq.price_range_high)} | OI distributed across map: $${compactFmt.format(oiValue)} | Colors: blue low, green medium, yellow high`;
+          liqMeta.textContent = `Window: ${liqWindow.label} | Price range: ${formatPrice(liq.price_range_low)} - ${formatPrice(liq.price_range_high)} | OI distributed across map: $${compactFmt.format(oiValue)} | Dominant pull: ${liq.dominant_pull} ${(liq.confidence * 100).toFixed(1)}%`;
 
           const now = new Date();
           refreshMeta.textContent = `Last refresh: ${now.toLocaleString()} | Pair: ${symbol}`;
         } catch (error) {
+          clearAutoRefreshTimers();
           refreshMeta.textContent = `Error: ${error.message}`;
         } finally {
           refreshBtn.disabled = false;
@@ -1145,6 +3805,7 @@
         const useLiq = useLiqForBacktest.checked;
         const useHtf = useHtfFilter.checked;
         const useSentiment = useSentimentData.checked;
+        const useVolume = useVolumeFilter.checked;
         const htfInterval = htfIntervalSelect.value;
         const htfLookback = htfLookbackSelect.value;
         runBacktestBtn.disabled = true;
@@ -1154,7 +3815,7 @@
         backtestAbortController = new AbortController();
 
         try {
-          const url = `/bot/backtest?symbol=${symbol}&interval=1m&candle_limit=300&initial_capital=${runStartCapital}&fee_rate=0.0004&leverage=1&confidence_threshold=0.5&max_trades=50&use_liquidation_data=${useLiq}&use_htf_filter=${useHtf}&htf_interval=${htfInterval}&htf_lookback=${htfLookback}&use_sentiment_data=${useSentiment}`;
+          const url = `/bot/backtest?symbol=${symbol}&interval=1m&candle_limit=300&initial_capital=${runStartCapital}&fee_rate=0.0004&leverage=1&confidence_threshold=0.5&max_trades=50&use_liquidation_data=${useLiq}&use_htf_filter=${useHtf}&htf_interval=${htfInterval}&htf_lookback=${htfLookback}&use_sentiment_data=${useSentiment}&use_volume_filter=${useVolume}`;
           const response = await fetch(url, { signal: backtestAbortController.signal });
           if (!response.ok) {
             throw new Error("Backtest API failed");
@@ -1172,9 +3833,9 @@
 
           cumulativeTrades = cumulativeTrades.concat(data.trades || []);
           updateCumulativeStats();
-          renderTradeRows(data.trades || []);
+          renderTradeRows(backtestTradeRows, cumulativeTrades, "No trades yet.", 15);
 
-          backtestMeta.textContent = `Backtest complete for ${symbol}. Start=${runStartCapital.toFixed(2)}, End=${data.final_capital.toFixed(2)} | Liquidation: ${useLiq ? "ON" : "OFF"}, HTF: ${useHtf ? `${htfInterval}/${htfLookback}` : "OFF"}, Sentiment: ${useSentiment ? "ON" : "OFF"} | Next run starts from latest final capital.`;
+          backtestMeta.textContent = `Backtest complete for ${symbol}. Start=${runStartCapital.toFixed(2)}, End=${data.final_capital.toFixed(2)} | Liquidation: ${useLiq ? "ON" : "OFF"}, HTF: ${useHtf ? `${htfInterval}/${htfLookback}` : "OFF"}, Sentiment: ${useSentiment ? "ON" : "OFF"}, Volume: ${useVolume ? "ON" : "OFF"} | Trade log shows cumulative history across runs.`;
         } catch (error) {
           if (error.name === "AbortError") {
             backtestMeta.textContent = "Backtest stopped by user.";
@@ -1197,9 +3858,10 @@
         try {
           const useHtf = useHtfFilter.checked;
           const useSentiment = useSentimentData.checked;
+          const useVolume = useVolumeFilter.checked;
           const htfInterval = htfIntervalSelect.value;
           const htfLookback = htfLookbackSelect.value;
-          const base = `/bot/backtest?symbol=${symbol}&interval=1m&candle_limit=300&initial_capital=${compareCapital}&fee_rate=0.0004&leverage=1&confidence_threshold=0.5&max_trades=50&use_htf_filter=${useHtf}&htf_interval=${htfInterval}&htf_lookback=${htfLookback}&use_sentiment_data=${useSentiment}`;
+          const base = `/bot/backtest?symbol=${symbol}&interval=1m&candle_limit=300&initial_capital=${compareCapital}&fee_rate=0.0004&leverage=1&confidence_threshold=0.5&max_trades=50&use_htf_filter=${useHtf}&htf_interval=${htfInterval}&htf_lookback=${htfLookback}&use_sentiment_data=${useSentiment}&use_volume_filter=${useVolume}`;
           const [onRes, offRes] = await Promise.all([
             fetch(`${base}&use_liquidation_data=true`),
             fetch(`${base}&use_liquidation_data=false`)
@@ -1215,7 +3877,7 @@
           abOnStats.innerHTML = `Start: ${compareCapital.toFixed(2)}<br>End: ${onData.final_capital.toFixed(2)}<br>Return: ${onData.return_pct.toFixed(2)}%<br>Win Rate: ${(onData.win_rate * 100).toFixed(1)}%<br>Trades: ${onData.total_trades}`;
           abOffStats.innerHTML = `Start: ${compareCapital.toFixed(2)}<br>End: ${offData.final_capital.toFixed(2)}<br>Return: ${offData.return_pct.toFixed(2)}%<br>Win Rate: ${(offData.win_rate * 100).toFixed(1)}%<br>Trades: ${offData.total_trades}`;
 
-          abMeta.textContent = `A/B comparison complete for ${symbol} using identical start capital ${compareCapital.toFixed(2)} | HTF: ${useHtf ? `${htfInterval}/${htfLookback}` : "OFF"}, Sentiment: ${useSentiment ? "ON" : "OFF"}.`;
+          abMeta.textContent = `A/B comparison complete for ${symbol} using identical start capital ${compareCapital.toFixed(2)} | HTF: ${useHtf ? `${htfInterval}/${htfLookback}` : "OFF"}, Sentiment: ${useSentiment ? "ON" : "OFF"}, Volume: ${useVolume ? "ON" : "OFF"}.`;
         } catch (error) {
           abMeta.textContent = `A/B error: ${error.message}`;
         } finally {
@@ -1238,7 +3900,7 @@
         btFees.textContent = "-";
         btFunding.textContent = "-";
         btMdd.textContent = "-";
-        backtestTradeRows.innerHTML = '<tr><td colspan="10" style="color:#8ca3c7;">No trades yet.</td></tr>';
+        backtestTradeRows.innerHTML = '<tr><td colspan="15" style="color:#8ca3c7;">No trades yet.</td></tr>';
         backtestMeta.textContent = "Bot test state reset. Next run starts from 1000.00.";
         abMeta.textContent = "A/B comparison not run yet.";
         abOnStats.textContent = "-";
@@ -1248,9 +3910,11 @@
 
       refreshBtn.addEventListener("click", loadDashboard);
       pairSelect.addEventListener("change", loadDashboard);
+      pairSelect.addEventListener("change", initializeLiveDashboard);
+      pairSelect.addEventListener("change", loadBybitDemoBotStatus);
+      liqWindowSelect.addEventListener("change", loadDashboard);
       liqRangeSelect.addEventListener("change", loadDashboard);
       liqResolutionSelect.addEventListener("change", loadDashboard);
-      liqHistorySelect.addEventListener("change", loadDashboard);
       runBacktestBtn.addEventListener("click", runBacktest);
       stopBacktestBtn.addEventListener("click", () => {
         if (backtestAbortController) {
@@ -1259,15 +3923,28 @@
       });
       resetBacktestBtn.addEventListener("click", resetBacktestState);
       runABBtn.addEventListener("click", runABComparison);
+      startBybitDemoBotBtn.addEventListener("click", startBybitDemoBot);
+      stopBybitDemoBotBtn.addEventListener("click", stopBybitDemoBot);
+      refreshBybitDemoBotBtn.addEventListener("click", loadBybitDemoBotStatus);
+      chartIntervalSelect.addEventListener("change", () => {
+        liveMarketState.activeInterval = chartIntervalSelect.value;
+        refreshLiveStats();
+        renderLiveChart();
+      });
+      showEmaStack.addEventListener("change", renderLiveChart);
+      showVwap.addEventListener("change", renderLiveChart);
+      showLevels.addEventListener("change", renderLiveChart);
+      togglePaperHistoryBtn.addEventListener("click", () => {
+        paperHistoryDetails.open = !paperHistoryDetails.open;
+        togglePaperHistoryBtn.textContent = paperHistoryDetails.open ? "Hide Past Trades" : "Show Past Trades";
+      });
+      toggleBybitDemoHistoryBtn.addEventListener("click", () => {
+        bybitDemoHistoryDetails.open = !bybitDemoHistoryDetails.open;
+        toggleBybitDemoHistoryBtn.textContent = bybitDemoHistoryDetails.open ? "Hide Demo Trade History" : "Show Demo Trade History";
+      });
       autoRefresh.addEventListener("change", () => {
-        if (autoTimer) {
-          clearInterval(autoTimer);
-          autoTimer = null;
-        }
-        if (autoRefresh.checked) {
-          autoTimer = setInterval(loadDashboard, 30000);
-          refreshMeta.textContent = `${refreshMeta.textContent} | Auto refresh ON`;
-        }
+        scheduleAutoRefresh(latestSignalExpiry);
+        renderAutoRefreshStatus();
       });
 
       // Modal: Close when clicking outside
@@ -1278,8 +3955,20 @@
         }
       });
 
-      loadDashboard();
-      updateCumulativeStats();
+      async function bootstrapPage() {
+        await loadAvailableSymbols();
+        initializeLiveDashboard();
+        loadDashboard();
+        loadBybitDemoBotStatus();
+        updateCumulativeStats();
+      }
+
+      bootstrapPage();
+      window.addEventListener("beforeunload", () => {
+        teardownLiveWebsocket();
+        clearPaperBotTimer();
+        clearBybitDemoBotTimer();
+      });
     </script>
   </body>
 </html>
