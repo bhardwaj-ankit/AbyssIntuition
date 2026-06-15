@@ -25,6 +25,63 @@ source .venv/bin/activate
 pip install -e .[dev]
 ```
 
+## Fresh Clone Setup
+
+If you clone this repo onto a new machine and want the same local runtime data, use this order:
+
+1. Create the virtual environment and install the package:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+```
+
+2. Start the API once so the local SQLite store and runtime folders are created automatically:
+
+```bash
+uvicorn liquidity_signal.api.app:app --reload
+```
+
+3. Generate fresh liquidation history and training snapshots by using the API or CLI against live Binance data. The store is rebuilt locally under `runtime/` the first time you run the engine.
+
+4. If you want the training datasets that were used for LoRA work, export them again from the rebuilt store:
+
+```bash
+liquidity-signal dataset-summary BTCUSDT
+liquidity-signal export-lora --symbol BTCUSDT --horizon-minutes 15 --limit 2000 --balance-mode undersample_majority
+liquidity-signal prepare-mlx-lora --horizon-minutes 5
+liquidity-signal prepare-mlx-lora --horizon-minutes 15
+```
+
+5. If you use the Bybit demo bot, copy the local config templates before starting it:
+
+```bash
+cp runtime/bybit_demo_config.example.json runtime/bybit_demo_config.json
+cp runtime/ai_supervisor_config.example.json runtime/ai_supervisor_config.json
+```
+
+6. For the Docker setup, copy the environment template and bring the stack up:
+
+```bash
+cp .env.docker.example .env.docker
+docker compose up -d --build
+```
+
+What gets recreated locally:
+- `runtime/liquidation_history.db` for liquidation events, snapshots, backtests, and training tables
+- `runtime/lora_exports/` for ChatML and prompt-completion exports
+- `runtime/mlx_lora_data/` for MLX train/validation/test splits
+- `runtime/mlx_lora_runs/` for adapter checkpoints
+- `runtime/training_backfill.db` for historical backfill captures
+
+What is not automatically restored from git:
+- private demo credentials
+- private OpenAI keys
+- your deployed `.env.docker`
+
+If you want a fully populated local workspace, run the backfill and export commands after the first API start. That repopulates the runtime data using live market history instead of relying on checked-in artifacts.
+
 Run CLI signal:
 
 ```bash
