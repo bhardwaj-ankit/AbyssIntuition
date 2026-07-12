@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from bisect import bisect_left, bisect_right
 import threading
 import time
 from typing import Any
@@ -51,8 +52,10 @@ from liquidity_signal.models import (
 from liquidity_signal.ai.lora_dataset import (
     TrainingExampleBundle,
     build_lora_example,
+    chronological_split_examples,
     class_weights,
     rebalance_examples,
+    rebalance_examples_by_split,
 )
 from liquidity_signal.risk.tpsl import compute_tp_sl, compute_tp_sl_with_breakdown
 from liquidity_signal.service.liquidation_runtime import LiquidationRuntime
@@ -69,7 +72,7 @@ BINANCE_HISTORICAL_SYMBOL_ALIASES = {
 class SignalEngine:
     BACKTEST_SIGNAL_SOURCE = "signal_api_plus_regime_strategy"
     PAPER_SIGNAL_SOURCE = "signal_api_live_regime_bot"
-    TRAINING_LABEL_HORIZONS_MINUTES = (5, 15, 30)
+    TRAINING_LABEL_HORIZONS_MINUTES = (5, 15, 30, 60, 240)
 
     def __init__(
         self,
@@ -138,7 +141,14 @@ class SignalEngine:
             atr_pct = max(atr_pct, self._safe_float(getattr(timeframe_map.get("15m"), "atr_pct", 0.0)))
         volatility_pct = max(atr_pct, explain.features.short_volatility_bps / 100.0, 0.12)
         roundtrip_cost_pct = 0.10
-        horizon_multiplier = 0.95 if horizon_minutes <= 15 else 1.25
+        if horizon_minutes <= 15:
+            horizon_multiplier = 0.95
+        elif horizon_minutes <= 30:
+            horizon_multiplier = 1.25
+        elif horizon_minutes <= 60:
+            horizon_multiplier = 1.60
+        else:
+            horizon_multiplier = 2.40
         return self._clamp(max(volatility_pct * horizon_multiplier, roundtrip_cost_pct + 0.08), 0.18, 3.20)
 
     def _build_training_labels(
@@ -367,10 +377,10 @@ class SignalEngine:
             upper_hit = high_price >= label.upper_barrier_price
             lower_hit = low_price <= label.lower_barrier_price
             if upper_hit and lower_hit:
-                if close_price > open_price:
-                    resolved_action = Direction.LONG
-                elif close_price < open_price:
-                    resolved_action = Direction.SHORT
+                # One-minute OHLC cannot reveal which barrier was hit first.
+                # Treat the ambiguous candle as no-trade instead of inventing
+                # an ordering from its close direction.
+                resolved_action = Direction.FLAT
                 terminal_price = close_price
                 break
             if upper_hit:
@@ -742,7 +752,13 @@ class SignalEngine:
         timeframe_specs = [("5m", klines_5m, 220), ("15m", klines_15m, 220), ("1h", klines_1h, 260)]
         timeframe_signals: list[CumulativeSignalTimeframe] = []
         for timeframe, rows, limit in timeframe_specs:
-            visible_rows = [row for row in rows if int(row[0]) <= time_ms][-limit:]
+            interval_minutes = {"5m": 5, "15m": 15, "1h": 60}[timeframe]
+            visible_rows = self._closed_klines_at(
+                rows,
+                time_ms=time_ms,
+                interval_minutes=interval_minutes,
+                limit=limit,
+            )
             candles = [
                 Candle(
                     open_time=int(row[0]),
@@ -877,6 +893,7 @@ class SignalEngine:
         step_minutes: int = 5,
         max_samples: int = 400,
         include_stored_liquidation: bool = True,
+        include_historical_positioning: bool = True,
     ) -> HistoricalTrainingBackfillResponse:
         fetch_symbol = self._historical_fetch_symbol(symbol.upper())
         now_ms = int(time.time() * 1000)
@@ -891,6 +908,10 @@ class SignalEngine:
         warmup_1h_start = start_ms - (260 * 60 * 60_000)
         warmup_4h_start = start_ms - (100 * 4 * 60 * 60_000)
         warmup_12h_start = start_ms - (100 * 12 * 60 * 60_000)
+        # Binance futures-data endpoints retain only the latest 30 days and can
+        # return an empty page when the cursor lands a few milliseconds outside
+        # that rolling boundary. Keep a one-hour safety margin.
+        metrics_start_ms = max(start_ms, now_ms - (719 * 60 * 60 * 1000))
 
         klines_1m = self.client.get_historical_klines(fetch_symbol, "1m", warmup_1m_start, now_ms)
         klines_5m = self.client.get_historical_klines(fetch_symbol, "5m", warmup_5m_start, now_ms)
@@ -900,7 +921,8 @@ class SignalEngine:
         klines_12h = self.client.get_historical_klines(fetch_symbol, "12h", warmup_12h_start, now_ms)
 
         try:
-            oi_hist = self.client.get_open_interest_hist(fetch_symbol, period="5m", limit=240)
+            historical = getattr(self.client, "get_historical_open_interest_hist", None) if include_historical_positioning else None
+            oi_hist = historical(fetch_symbol, "5m", metrics_start_ms, now_ms) if historical else self.client.get_open_interest_hist(fetch_symbol, period="5m", limit=240)
         except Exception:
             oi_hist = []
             notes.append("Open interest history was unavailable for part of the backfill.")
@@ -910,27 +932,39 @@ class SignalEngine:
             funding_rates = []
             notes.append("Funding history was unavailable for part of the backfill.")
         try:
-            basis_rows = self.client.get_basis(fetch_symbol, period="5m", limit=240)
+            historical = getattr(self.client, "get_historical_basis", None) if include_historical_positioning else None
+            if historical:
+                try:
+                    basis_rows = historical(fetch_symbol, "5m", metrics_start_ms, now_ms)
+                except Exception:
+                    basis_rows = self.client.get_basis(fetch_symbol, period="5m", limit=240)
+                    notes.append("Historical basis pagination was unavailable; recent basis was retained.")
+            else:
+                basis_rows = self.client.get_basis(fetch_symbol, period="5m", limit=240)
         except Exception:
             basis_rows = []
             notes.append("Basis history hit rate limits or was unavailable.")
         try:
-            taker_volume_rows = self.client.get_taker_buy_sell_volume(fetch_symbol, period="5m", limit=240)
+            historical = getattr(self.client, "get_historical_taker_buy_sell_volume", None) if include_historical_positioning else None
+            taker_volume_rows = historical(fetch_symbol, "5m", metrics_start_ms, now_ms) if historical else self.client.get_taker_buy_sell_volume(fetch_symbol, period="5m", limit=240)
         except Exception:
             taker_volume_rows = []
             notes.append("Taker buy/sell history hit rate limits or was unavailable.")
         try:
-            global_ratio_rows = self.client.get_global_long_short_account_ratio(fetch_symbol, period="5m", limit=240)
+            historical = getattr(self.client, "get_historical_global_long_short_account_ratio", None) if include_historical_positioning else None
+            global_ratio_rows = historical(fetch_symbol, "5m", metrics_start_ms, now_ms) if historical else self.client.get_global_long_short_account_ratio(fetch_symbol, period="5m", limit=240)
         except Exception:
             global_ratio_rows = []
             notes.append("Global long/short ratio history hit rate limits or was unavailable.")
         try:
-            top_account_ratio_rows = self.client.get_top_long_short_account_ratio(fetch_symbol, period="5m", limit=240)
+            historical = getattr(self.client, "get_historical_top_long_short_account_ratio", None) if include_historical_positioning else None
+            top_account_ratio_rows = historical(fetch_symbol, "5m", metrics_start_ms, now_ms) if historical else self.client.get_top_long_short_account_ratio(fetch_symbol, period="5m", limit=240)
         except Exception:
             top_account_ratio_rows = []
             notes.append("Top account ratio history hit rate limits or was unavailable.")
         try:
-            top_position_ratio_rows = self.client.get_top_long_short_position_ratio(fetch_symbol, period="5m", limit=240)
+            historical = getattr(self.client, "get_historical_top_long_short_position_ratio", None) if include_historical_positioning else None
+            top_position_ratio_rows = historical(fetch_symbol, "5m", metrics_start_ms, now_ms) if historical else self.client.get_top_long_short_position_ratio(fetch_symbol, period="5m", limit=240)
         except Exception:
             top_position_ratio_rows = []
             notes.append("Top position ratio history hit rate limits or was unavailable.")
@@ -948,13 +982,25 @@ class SignalEngine:
         step_ms = step_minutes * 60_000
 
         anchor_cutoff_ms = now_ms - (max(self.TRAINING_LABEL_HORIZONS_MINUTES) * 60_000)
-        candidate_rows = [row for row in klines_1m if start_ms <= int(row[0]) <= anchor_cutoff_ms]
-        anchors = [int(row[0]) for row in candidate_rows if int(row[0]) % step_ms == 0][:max_samples]
+        candidate_rows = [
+            row for row in klines_1m
+            if start_ms <= int(row[0]) <= anchor_cutoff_ms
+            and int(row[0]) % step_ms == 0
+        ]
+        anchors = [
+            self._kline_close_time(row, 1)
+            for row in candidate_rows[:max_samples]
+        ]
 
         analyzer = MTFRegimeAnalyzer()
         for anchor_ms in anchors:
             samples_attempted += 1
-            visible_1m = [row for row in klines_1m if int(row[0]) <= anchor_ms][-self.cfg.short_kline_limit :]
+            visible_1m = self._closed_klines_at(
+                klines_1m,
+                time_ms=anchor_ms,
+                interval_minutes=1,
+                limit=self.cfg.short_kline_limit,
+            )
             if len(visible_1m) < min(self.cfg.short_kline_limit, 40):
                 skipped_samples += 1
                 continue
@@ -1029,7 +1075,12 @@ class SignalEngine:
                 visible_1m=visible_1m,
                 liq_map=liq_map,
             )
-            visible_5m = [row for row in klines_5m if int(row[0]) <= anchor_ms][-24:]
+            visible_5m = self._closed_klines_at(
+                klines_5m,
+                time_ms=anchor_ms,
+                interval_minutes=5,
+                limit=24,
+            )
             structure_context = self._structure_context(
                 visible_1m=visible_1m,
                 visible_5m=visible_5m,
@@ -1082,7 +1133,9 @@ class SignalEngine:
 
             for raw_label in self.liquidation_store.load_training_labels_for_snapshot(snapshot_id):
                 label = TrainingSnapshotLabel.model_validate(raw_label)
-                path = [row for row in klines_1m if label.event_ts <= int(row[0]) <= label.expires_at]
+                path = self._klines_in_open_time_range(
+                    klines_1m, label.event_ts, label.expires_at
+                )
                 updated = self._resolve_training_label_from_path(label, path, now_ms=min(now_ms, label.expires_at))
                 if updated is None:
                     continue
@@ -1114,6 +1167,7 @@ class SignalEngine:
         step_minutes: int = 5,
         max_samples_per_symbol: int = 400,
         include_stored_liquidation: bool = True,
+        include_historical_positioning: bool = True,
     ) -> HistoricalTrainingBackfillBatchResponse:
         normalized = [symbol.upper() for symbol in symbols if str(symbol).strip()]
         items: list[HistoricalTrainingBackfillBatchItem] = []
@@ -1125,6 +1179,7 @@ class SignalEngine:
                     step_minutes=step_minutes,
                     max_samples=max_samples_per_symbol,
                     include_stored_liquidation=include_stored_liquidation,
+                    include_historical_positioning=include_historical_positioning,
                 )
                 items.append(
                     HistoricalTrainingBackfillBatchItem(
@@ -1186,7 +1241,12 @@ class SignalEngine:
             )
             for row in rows
         ]
-        examples = rebalance_examples(raw_examples, balance_mode=balance_mode)
+        split_examples = chronological_split_examples(raw_examples)
+        examples = (
+            rebalance_examples_by_split(split_examples, balance_mode=balance_mode)
+            if len(split_examples) >= 30
+            else rebalance_examples(split_examples, balance_mode=balance_mode)
+        )
         summary = LoraTrainingExportSummary(
             symbol=symbol.upper(),
             horizon_minutes=horizon_minutes,
@@ -1443,6 +1503,39 @@ class SignalEngine:
                     return 0
         return 0
 
+    @staticmethod
+    def _kline_close_time(row: list[Any], interval_minutes: int) -> int:
+        """Return the first millisecond after a candle is fully known."""
+        if len(row) > 6:
+            try:
+                return int(row[6]) + 1
+            except (TypeError, ValueError):
+                pass
+        return int(row[0]) + (interval_minutes * 60_000)
+
+    def _closed_klines_at(
+        self,
+        rows: list[list[Any]],
+        *,
+        time_ms: int,
+        interval_minutes: int,
+        limit: int | None = None,
+    ) -> list[list[Any]]:
+        if not rows:
+            return []
+        latest_open_time = time_ms - (interval_minutes * 60_000)
+        end = bisect_right(rows, latest_open_time, key=lambda row: int(row[0]))
+        start = max(0, end - limit) if limit else 0
+        return rows[start:end]
+
+    @staticmethod
+    def _klines_in_open_time_range(
+        rows: list[list[Any]], start_ms: int, end_ms: int
+    ) -> list[list[Any]]:
+        start = bisect_left(rows, start_ms, key=lambda row: int(row[0]))
+        end = bisect_right(rows, end_ms, key=lambda row: int(row[0]))
+        return rows[start:end]
+
     def _rows_through_time(self, rows: list[dict[str, Any]], time_ms: int, limit: int) -> list[dict[str, Any]]:
         visible = [row for row in rows if self._row_timestamp(row) <= time_ms]
         if limit <= 0:
@@ -1458,9 +1551,9 @@ class SignalEngine:
         klines_4h: list[list[Any]],
         klines_12h: list[list[Any]],
     ) -> tuple[MarketRegime, float]:
-        visible_1h = [row for row in klines_1h if int(row[0]) <= time_ms]
-        visible_4h = [row for row in klines_4h if int(row[0]) <= time_ms]
-        visible_12h = [row for row in klines_12h if int(row[0]) <= time_ms]
+        visible_1h = self._closed_klines_at(klines_1h, time_ms=time_ms, interval_minutes=60)
+        visible_4h = self._closed_klines_at(klines_4h, time_ms=time_ms, interval_minutes=240)
+        visible_12h = self._closed_klines_at(klines_12h, time_ms=time_ms, interval_minutes=720)
         if len(visible_1h) < 21 or len(visible_4h) < 21 or len(visible_12h) < 21:
             return MarketRegime.BALANCED, 0.0
         regime, bias, _ = analyzer.analyze(visible_1h[-100:], visible_4h[-100:], visible_12h[-100:])

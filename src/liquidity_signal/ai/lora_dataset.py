@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
 import json
 from typing import Any
 
@@ -272,49 +271,46 @@ def _snapshot_view(bundle: TrainingExampleBundle) -> dict[str, Any]:
 
 def _assistant_completion(bundle: TrainingExampleBundle) -> str:
     label = bundle.label
-    raw = bundle.snapshot.get("raw_payload", {})
-    bot_signal = raw.get("bot_signal", {})
-    entry_price = _round(label.get("raw_payload", {}).get("entry_price", bundle.snapshot.get("mark_price", 0.0)), 4)
-    terminal_price = _round(label.get("terminal_price", 0.0), 4)
-    terminal_return_pct = 0.0
-    if entry_price > 0.0 and terminal_price > 0.0:
-        terminal_return_pct = ((terminal_price - entry_price) / entry_price) * 100.0
+    # Keep the supervised target to information available at inference time.  The
+    # previous completion also contained realized future prices and excursions;
+    # that made a small model spend capacity generating unknowable values instead
+    # of learning the three-way classification task.
     return json.dumps(
         {
             "prediction": label.get("label_action", Direction.FLAT.value),
             "horizon_minutes": int(label.get("horizon_minutes", 0) or 0),
-            "model_prior": {
-                "signal_direction": bot_signal.get("direction", bundle.snapshot.get("signal_direction", "")),
-                "signal_confidence": _round(bot_signal.get("confidence", bundle.snapshot.get("signal_confidence", 0.0)), 3),
-                "signal_quality": bot_signal.get("signal_quality", bundle.snapshot.get("signal_quality", "")),
-                "decision_action": bundle.decision.get("decision_action", ""),
-                "took_trade": bool(bundle.decision.get("took_trade", False)),
-            },
-            "observed_outcome": {
-                "max_up_pct": _round(label.get("max_up_pct", 0.0), 3),
-                "max_down_pct": _round(label.get("max_down_pct", 0.0), 3),
-                "terminal_price": _round(label.get("terminal_price", 0.0), 4),
-                "terminal_return_pct": _round(terminal_return_pct, 3),
-            },
-            "context": {
-                "signal_direction": bot_signal.get("direction", bundle.snapshot.get("signal_direction", "")),
-                "signal_confidence": _round(bot_signal.get("confidence", bundle.snapshot.get("signal_confidence", 0.0)), 3),
-                "signal_quality": bot_signal.get("signal_quality", bundle.snapshot.get("signal_quality", "")),
-                "took_trade": bool(bundle.decision.get("took_trade", False)),
-            },
         },
         separators=(",", ":"),
     )
 
 
-def _split(snapshot_id: str) -> str:
-    digest = hashlib.sha256(snapshot_id.encode("utf-8")).hexdigest()
-    bucket = int(digest[:8], 16) % 10
-    if bucket <= 6:
-        return "train"
-    if bucket == 7:
-        return "validation"
-    return "test"
+def chronological_split_examples(
+    examples: list[LoraTrainingExample],
+    *,
+    train_fraction: float = 0.70,
+    validation_fraction: float = 0.15,
+) -> list[LoraTrainingExample]:
+    """Assign leakage-resistant splits ordered by event time.
+
+    Dense market snapshots are strongly autocorrelated, so hashing snapshot ids
+    puts near-duplicates on both sides of an evaluation boundary.  Ordering by
+    event time makes validation and test results representative of deployment.
+    """
+    if not examples:
+        return examples
+    ordered = sorted(
+        examples,
+        key=lambda row: (int(row.metadata.get("event_ts") or 0), row.snapshot_id),
+    )
+    count = len(ordered)
+    train_end = max(1, int(count * train_fraction))
+    validation_end = max(train_end, int(count * (train_fraction + validation_fraction)))
+    if count >= 3:
+        train_end = min(train_end, count - 2)
+        validation_end = min(max(validation_end, train_end + 1), count - 1)
+    for index, row in enumerate(ordered):
+        row.split = "train" if index < train_end else "validation" if index < validation_end else "test"
+    return ordered
 
 
 def build_lora_example(bundle: TrainingExampleBundle) -> LoraTrainingExample:
@@ -328,7 +324,7 @@ def build_lora_example(bundle: TrainingExampleBundle) -> LoraTrainingExample:
         label_action=Direction(str(bundle.label.get("label_action", Direction.FLAT.value))),
         decision_action=str(bundle.decision.get("decision_action", "")),
         took_trade=bool(bundle.decision.get("took_trade", False)),
-        split=_split(str(bundle.snapshot.get("snapshot_id", ""))),
+        split="train",
         prompt=prompt,
         completion=completion,
         messages=[
@@ -388,6 +384,26 @@ def rebalance_examples(
         raise ValueError(f"Unsupported balance mode: {balance_mode}")
 
     selected.sort(key=lambda item: (item.split, item.snapshot_id, item.horizon_minutes))
+    return selected
+
+
+def rebalance_examples_by_split(
+    examples: list[LoraTrainingExample],
+    *,
+    balance_mode: str = "none",
+) -> list[LoraTrainingExample]:
+    """Balance each chronological partition without moving rows across time."""
+    selected: list[LoraTrainingExample] = []
+    for split in ("train", "validation", "test"):
+        partition = [row for row in examples if row.split == split]
+        selected.extend(rebalance_examples(partition, balance_mode=balance_mode))
+    selected.sort(
+        key=lambda row: (
+            {"train": 0, "validation": 1, "test": 2}.get(row.split, 3),
+            int(row.metadata.get("event_ts") or 0),
+            row.snapshot_id,
+        )
+    )
     return selected
 
 

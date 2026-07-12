@@ -106,7 +106,7 @@ def test_historical_backfill_batch_runs_multiple_symbols(tmp_path: Path) -> None
 
     result = engine.backfill_historical_training_batch(
         ["BTCUSDT", "ETHUSDT"],
-        lookback_hours=4,
+        lookback_hours=6,
         step_minutes=30,
         max_samples_per_symbol=4,
         include_stored_liquidation=False,
@@ -116,4 +116,20 @@ def test_historical_backfill_batch_runs_multiple_symbols(tmp_path: Path) -> None
     assert result.total_snapshots_created > 0
     assert result.total_resolved_labels >= result.total_snapshots_created
 
+    store.close()
+
+
+def test_historical_features_only_use_closed_candles(tmp_path: Path) -> None:
+    store = LiquidationStore(db_path=tmp_path / "closed_candles.db")
+    engine = SignalEngine(client=FakeHistoricalClient(), liquidation_store=store)
+    hour = 60 * 60_000
+    rows = [
+        [0, "100", "101", "99", "100", "10"],
+        [hour, "100", "150", "90", "140", "10"],
+    ]
+
+    visible = engine._closed_klines_at(rows, time_ms=hour + 30 * 60_000, interval_minutes=60)
+
+    assert len(visible) == 1
+    assert int(visible[0][0]) == 0
     store.close()

@@ -12,6 +12,8 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from liquidity_signal.ai.deployment import deployment_status
+
 from liquidity_signal.models import (
     BotBacktestResponse,
     CandleResponse,
@@ -87,6 +89,12 @@ def home() -> FileResponse:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/model/deployment-status")
+def model_deployment_status() -> dict[str, Any]:
+    """Expose model readiness; missing or malformed manifests fail closed."""
+    return deployment_status()
 
 
 @app.get("/signal", response_model=SignalApiResponse)

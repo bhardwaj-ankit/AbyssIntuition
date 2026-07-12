@@ -296,6 +296,15 @@ Recommended production setup:
 
 Detailed internet-facing setup is documented in [deploy/INTERNET_SETUP.md](/Users/ankitbhardwaj/Documents/AbyssIntuition/deploy/INTERNET_SETUP.md).
 
+## Documentation
+
+Detailed docs live in [docs/](docs/):
+- [project-brief-solution-intent.md](docs/project-brief-solution-intent.md) — re-architecture toward a fine-tuned signal + price model, with measured data-readiness findings
+- [local-lora-training.md](docs/local-lora-training.md) — local LoRA training workflow
+- [MARKET_BEHAVIOR_FEATURE.md](docs/MARKET_BEHAVIOR_FEATURE.md) / [IMPLEMENTATION_SUMMARY.md](docs/IMPLEMENTATION_SUMMARY.md) — market-behavior feature
+- [liquidation-api-white-paper.md](docs/liquidation-api-white-paper.md) / [liquidation-api-trade-signal-guide.md](docs/liquidation-api-trade-signal-guide.md) — liquidation API
+- [trading-signal-research-api.md](docs/trading-signal-research-api.md) / [deep-research-report.md](docs/deep-research-report.md) — research notes
+
 ## Notes
 - This project can place Bybit demo orders when the Bybit demo bot is enabled; it does not place live production orders.
 - Signals are multi-factor heuristics over liquidity, trend, positioning, and liquidation structure; they are not financial advice.

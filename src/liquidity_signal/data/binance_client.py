@@ -119,6 +119,59 @@ class BinanceFuturesClient:
     def get_open_interest_hist(self, symbol: str, period: str = "5m", limit: int = 30) -> List[Dict[str, Any]]:
         return self._get_json("/futures/data/openInterestHist", params={"symbol": symbol, "period": period, "limit": limit})
 
+    def _get_historical_futures_data(
+        self,
+        path: str,
+        *,
+        params: dict[str, Any],
+        period: str,
+        start_time: int,
+        end_time: int,
+        timestamp_key: str = "timestamp",
+        limit_per_request: int = 500,
+    ) -> List[Dict[str, Any]]:
+        cursor = int(start_time)
+        step_ms = self._interval_ms(period)
+        rows: list[dict[str, Any]] = []
+        while cursor <= end_time:
+            batch = self._get_json(
+                path,
+                params={
+                    **params,
+                    "period": period,
+                    "limit": min(limit_per_request, 500),
+                    "startTime": cursor,
+                    "endTime": int(end_time),
+                },
+            )
+            if not batch:
+                break
+            rows.extend(batch)
+            last_time = int(batch[-1].get(timestamp_key, 0))
+            next_cursor = last_time + step_ms
+            if next_cursor <= cursor:
+                break
+            cursor = next_cursor
+            if len(batch) < min(limit_per_request, 500):
+                break
+        deduped: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            timestamp = int(row.get(timestamp_key, 0))
+            if timestamp:
+                deduped[timestamp] = row
+        return [deduped[key] for key in sorted(deduped)]
+
+    def get_historical_open_interest_hist(
+        self, symbol: str, period: str, start_time: int, end_time: int
+    ) -> List[Dict[str, Any]]:
+        return self._get_historical_futures_data(
+            "/futures/data/openInterestHist",
+            params={"symbol": symbol},
+            period=period,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
     def get_funding_rates(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
         return self._get_json("/fapi/v1/fundingRate", params={"symbol": symbol, "limit": limit})
 
@@ -140,12 +193,42 @@ class BinanceFuturesClient:
     ) -> List[Dict[str, Any]]:
         return self.get_taker_buy_sell_volume(symbol, period=period, limit=limit)
 
+    def get_historical_taker_buy_sell_volume(
+        self, symbol: str, period: str, start_time: int, end_time: int
+    ) -> List[Dict[str, Any]]:
+        return self._get_historical_futures_data(
+            "/futures/data/takerlongshortRatio",
+            params={"symbol": symbol},
+            period=period,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+    def get_historical_basis(
+        self, symbol: str, period: str, start_time: int, end_time: int
+    ) -> List[Dict[str, Any]]:
+        return self._get_historical_futures_data(
+            "/futures/data/basis",
+            params={"pair": symbol, "contractType": "PERPETUAL"},
+            period=period,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
     def get_global_long_short_account_ratio(
         self, symbol: str, period: str = "5m", limit: int = 100
     ) -> List[Dict[str, Any]]:
         return self._get_json(
             "/futures/data/globalLongShortAccountRatio",
             params={"symbol": symbol, "period": period, "limit": limit},
+        )
+
+    def get_historical_global_long_short_account_ratio(
+        self, symbol: str, period: str, start_time: int, end_time: int
+    ) -> List[Dict[str, Any]]:
+        return self._get_historical_futures_data(
+            "/futures/data/globalLongShortAccountRatio",
+            params={"symbol": symbol}, period=period, start_time=start_time, end_time=end_time,
         )
 
     def get_top_long_short_account_ratio(
@@ -156,10 +239,26 @@ class BinanceFuturesClient:
             params={"symbol": symbol, "period": period, "limit": limit},
         )
 
+    def get_historical_top_long_short_account_ratio(
+        self, symbol: str, period: str, start_time: int, end_time: int
+    ) -> List[Dict[str, Any]]:
+        return self._get_historical_futures_data(
+            "/futures/data/topLongShortAccountRatio",
+            params={"symbol": symbol}, period=period, start_time=start_time, end_time=end_time,
+        )
+
     def get_top_long_short_position_ratio(
         self, symbol: str, period: str = "5m", limit: int = 100
     ) -> List[Dict[str, Any]]:
         return self._get_json(
             "/futures/data/topLongShortPositionRatio",
             params={"symbol": symbol, "period": period, "limit": limit},
+        )
+
+    def get_historical_top_long_short_position_ratio(
+        self, symbol: str, period: str, start_time: int, end_time: int
+    ) -> List[Dict[str, Any]]:
+        return self._get_historical_futures_data(
+            "/futures/data/topLongShortPositionRatio",
+            params={"symbol": symbol}, period=period, start_time=start_time, end_time=end_time,
         )
