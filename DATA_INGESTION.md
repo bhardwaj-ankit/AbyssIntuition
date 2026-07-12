@@ -35,8 +35,14 @@ Ingest a range into `runtime/vision_metrics.db`:
 ```bash
 liquidity-signal ingest-vision-metrics \
   --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT" \
-  --start 2026-03-22 --end 2026-06-22
+  --start 2026-03-22 --end 2026-07-11
 ```
+
+**Current coverage** (updated by the `update-data-ingestion` skill; see
+[PROGRESS.md](PROGRESS.md) for the log): all 6 tracked symbols span
+`2026-03-22 -> 2026-07-12` (113 days, 31,968 rows/symbol) as of 2026-07-12.
+Re-run the ingest command above with an updated `--start`/`--end` (or invoke the
+skill) to catch up newly published days.
 
 Then train with those features filled in (missing OI → real OI):
 
@@ -128,13 +134,16 @@ trustworthy gate pass. This is the only source of *forward* ground-truth labels.
 
 ## 4. Data readiness snapshot
 
+_Last refreshed: 2026-07-12 (via `update-data-ingestion` skill)._
+
 | Signal family | Source | Historical status |
 |---|---|---|
 | Price/volume/structure/regime/session | klines | ✅ full history |
 | Funding | `fapi` fundingRate | ✅ ~74%+ |
-| Open interest + long/short + taker ratios | **Vision** (was: 30-day API) | ✅ full history via daily ingest |
+| Open interest + long/short + taker ratios | **Vision** (was: 30-day API) | ✅ 2026-03-22 -> 2026-07-12 (113 days, 6/6 symbols) |
 | Liquidation cluster levels | — | ❌ not yet integrated (Coinglass) |
-| Multi-regime span (6–12 mo) | live capture | ⏳ accumulating |
+| Multi-regime span (6–12 mo) | live capture | ⏳ accumulating (113/180+ days) |
 
 See [docs/project-brief-solution-intent.md](docs/project-brief-solution-intent.md)
-for the measured impact of each and the deploy-gate criteria.
+for the measured impact of each and the deploy-gate criteria, and
+[PROGRESS.md](PROGRESS.md) for the dated change log.

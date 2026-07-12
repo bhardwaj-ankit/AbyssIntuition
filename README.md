@@ -298,6 +298,9 @@ Detailed internet-facing setup is documented in [deploy/INTERNET_SETUP.md](/User
 
 ## Documentation
 
+- [DATA_INGESTION.md](DATA_INGESTION.md) — external data platforms (integrated / to-integrate, free/paid) and refresh jobs
+- [PROGRESS.md](PROGRESS.md) — dated progress log for the ML re-architecture effort
+
 Detailed docs live in [docs/](docs/):
 - [project-brief-solution-intent.md](docs/project-brief-solution-intent.md) — re-architecture toward a fine-tuned signal + price model, with measured data-readiness findings
 - [local-lora-training.md](docs/local-lora-training.md) — local LoRA training workflow
