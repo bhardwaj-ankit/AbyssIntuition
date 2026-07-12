@@ -349,12 +349,51 @@ def train_gbdt_command(
     db_path: str = "runtime/training_v5.db",
     horizon_minutes: int = 60,
     output_dir: str | None = None,
+    vision_db: str | None = None,
 ) -> None:
-    """Train the leakage-free two-head GBDT (direction + return range) on outcomes."""
+    """Train the leakage-free two-head GBDT (direction + return range) on outcomes.
+
+    Pass --vision-db to fill OI/positioning features from ingested Binance Vision
+    metrics (see the ingest-vision-metrics command).
+    """
     target = output_dir or f"runtime/models/gbdt-dual-{horizon_minutes}m-v1"
     console.print_json(data=train_gbdt_dual_head(
-        db_path, target, horizon_minutes=horizon_minutes
+        db_path, target, horizon_minutes=horizon_minutes, vision_db=vision_db
     ))
+
+
+@app.command("ingest-vision-metrics")
+def ingest_vision_metrics(
+    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    start: str = typer.Option(..., help="Start date YYYY-MM-DD (UTC)."),
+    end: str = typer.Option(..., help="End date YYYY-MM-DD (UTC, inclusive)."),
+    db_path: str = "runtime/vision_metrics.db",
+    cache_dir: str = "runtime/vision_cache",
+) -> None:
+    """Backfill OI/positioning metrics from Binance Vision daily bulk CSVs.
+
+    These endpoints retain years of history, unlike the 30-day futures-data API,
+    so this is how the model earns back the missing positioning signals.
+    """
+    from datetime import date
+
+    from liquidity_signal.data.binance_vision import BinanceVisionClient, VisionMetricsStore
+
+    start_day = date.fromisoformat(start)
+    end_day = date.fromisoformat(end)
+    client = BinanceVisionClient(cache_dir=cache_dir)
+    store = VisionMetricsStore(db_path)
+    results = []
+    try:
+        for symbol in [s.strip().upper() for s in symbols.split(",") if s.strip()]:
+            summary = store.ingest(client, symbol, start_day, end_day)
+            summary["coverage"] = store.coverage(symbol)
+            results.append(summary)
+            console.print(f"{symbol}: {summary['rows_stored']} rows across {summary['days_with_data']} days")
+    finally:
+        client.close()
+        store.close()
+    console.print_json(data={"db_path": db_path, "results": results})
 
 
 if __name__ == "__main__":

@@ -208,11 +208,46 @@ def _row_features(payload: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Data loading + cross-asset alignment
 # ---------------------------------------------------------------------------
+def _attach_vision(features: dict[str, Any], store: Any, symbol: str, event_ts: int) -> None:
+    """Overwrite missing derivative features with ingested Binance Vision metrics.
+
+    On >30-day history the live API cannot serve OI/positioning, so those columns
+    arrive as NaN; when a Vision store is provided we fill them from bulk data.
+    """
+    row = store.nearest(symbol, event_ts)
+    if not row:
+        return
+    mapping = {
+        "deriv.taker_buy_sell_ratio": row.get("taker_ratio"),
+        "deriv.global_long_short_ratio": row.get("global_account_ratio"),
+        "deriv.top_trader_account_ratio": row.get("top_account_ratio"),
+        "deriv.top_trader_position_ratio": row.get("top_position_ratio"),
+    }
+    for key, value in mapping.items():
+        if value is not None and (key not in features or _is_nan(features[key])):
+            features[key] = float(value)
+    change = store.oi_change_pct(symbol, event_ts)
+    if change is not None and _is_nan(features.get("deriv.oi_change_pct", math.nan)):
+        features["deriv.oi_change_pct"] = float(change)
+    if row.get("oi_value"):
+        features["deriv.oi_value_log"] = round(math.log1p(float(row["oi_value"])), 6)
+
+
+def _is_nan(value: Any) -> bool:
+    return isinstance(value, float) and math.isnan(value)
+
+
 def _load_dataset(db_path: str, horizon_minutes: int,
-                  btc_symbol: str = "BTCUSDT") -> list[dict[str, Any]]:
+                  btc_symbol: str = "BTCUSDT",
+                  vision_db: str | None = None) -> list[dict[str, Any]]:
     con = sqlite3.connect(db_path)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
+
+    vision_store = None
+    if vision_db and Path(vision_db).exists():
+        from liquidity_signal.data.binance_vision import VisionMetricsStore
+        vision_store = VisionMetricsStore(vision_db)
 
     # Cross-asset lookup: BTC market state indexed by event_ts.
     btc_by_ts: dict[int, dict[str, Any]] = {}
@@ -256,6 +291,9 @@ def _load_dataset(db_path: str, horizon_minutes: int,
             for key in ("btc_momentum_bps", "btc_volatility_bps", "btc_htf_bias", "rel_momentum_bps"):
                 features[f"xasset.{key}"] = math.nan
 
+        if vision_store is not None:
+            _attach_vision(features, vision_store, row["symbol"], event_ts)
+
         forward_return_bps = ((float(row["terminal_price"]) - mark) / mark) * 10_000
         rows.append({
             "event_ts": event_ts,
@@ -265,6 +303,8 @@ def _load_dataset(db_path: str, horizon_minutes: int,
             "return_bps": round(forward_return_bps, 4),
         })
     con.close()
+    if vision_store is not None:
+        vision_store.close()
     return rows
 
 
@@ -345,6 +385,7 @@ def train_gbdt_dual_head(
     *,
     horizon_minutes: int = 60,
     random_seed: int = 42,
+    vision_db: str | None = None,
 ) -> dict[str, Any]:
     """Train and evaluate the two-head model; write artefacts + a gate report."""
     import joblib
@@ -352,7 +393,7 @@ def train_gbdt_dual_head(
     import pandas as pd
     from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
 
-    rows = _load_dataset(db_path, horizon_minutes)
+    rows = _load_dataset(db_path, horizon_minutes, vision_db=vision_db)
     if len(rows) < 200:
         raise ValueError(f"Only {len(rows)} resolved rows for {horizon_minutes}m; need >=200.")
     train, validation, test = _chronological_split(rows, horizon_minutes)
@@ -496,6 +537,7 @@ def train_gbdt_dual_head(
     )
     summary = {
         "db_path": db_path,
+        "vision_db": vision_db,
         "horizon_minutes": horizon_minutes,
         "split": "test",
         "base_model": "sklearn.HistGradientBoosting",

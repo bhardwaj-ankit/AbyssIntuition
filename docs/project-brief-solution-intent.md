@@ -210,11 +210,16 @@ single most predictive perp signal family almost entirely absent:
 | funding rate | 9,548 / 12,936 (74%) |
 | kline-derived features (momentum, vol, structure, regime, session) | ~100% |
 
-This is **not a code bug** — the historical-pagination client is correct; the
-data simply no longer exists to fetch. The consequence is architectural: OI and
-positioning edge can only be earned by **capturing live snapshots forward**, not
-by backfill. Funding and all price/volume/structure features *are* fully
-available and are what the current model actually runs on.
+This is **not a code bug** — the *REST* client is correct; that endpoint simply
+stops serving data past 30 days. **Resolved:** the same metrics are published as
+daily bulk CSVs on Binance Vision going back years, now ingested via
+`data/binance_vision.py` / `ingest-vision-metrics` into `runtime/vision_metrics.db`
+and joined into the trainer with `train-gbdt --vision-db`. After ingesting the
+full 90-day span the derivative columns populate across the split (feature count
+95 → 101; 60m directional precision 0.318 → 0.357). See
+[DATA_INGESTION.md](../DATA_INGESTION.md) for the full platform inventory and
+the daily/weekly jobs. The remaining lever is therefore **history span**, not
+missing OI: 90 days is one regime.
 
 ### 7.3 Empirical ceiling (why this matters)
 
@@ -239,15 +244,19 @@ with the finding that the *old engine's* directional precision is **0.393 vs a
 
 ### 7.4 Path to "enough good data"
 
-1. **Capture forward, continuously.** Run the engine/bot to persist live
-   snapshots *with* full positioning (OI, taker, ratios) — the only way to get
-   these features. Target 6–12 months across multiple regimes.
-2. **Fix OI at capture** (done for go-forward: `_open_interest_change_pct` is now
+1. **Backfill positioning from Binance Vision** (done): OI/taker/long-short
+   ratios for the full history via `ingest-vision-metrics`, joined with
+   `train-gbdt --vision-db`. This removes the missing-OI defect.
+2. **Extend history span across regimes.** The binding constraint is now that 90
+   days ≈ one regime. Ingest a longer Vision range and keep live capture running
+   toward 6–12 months, then re-check the gate walk-forward.
+3. **Fix OI at capture** (done for go-forward: `_open_interest_change_pct` is now
    multi-window / noise-robust).
-3. **Add the highest-value missing signals**: liquidation-cluster distances
-   (the map currently keeps only a scalar confidence, discarding cluster
-   levels), multi-window CVD, funding × time-to-settlement interaction.
-4. **Re-evaluate walk-forward** across ≥2 non-overlapping windows before trusting
+4. **Add the highest-value missing signal**: liquidation-cluster distances (the
+   map currently keeps only a scalar confidence, discarding cluster levels) —
+   integrate Coinglass per [DATA_INGESTION.md](../DATA_INGESTION.md). Then
+   multi-window CVD and funding × time-to-settlement.
+5. **Re-evaluate walk-forward** across ≥2 non-overlapping windows before trusting
    any gate pass.
 
 ## 8. Recommended local stack (RTX 5080 16 GB / 64 GB RAM)
