@@ -50,6 +50,16 @@ logs/
 runtime/bybit_demo_config.json
 runtime/ai_supervisor_config.json
 
+# Generated runtime artifacts (rebuilt locally; see README fresh-clone setup)
+runtime/vision_cache/
+runtime/vision_metrics.db
+runtime/models/
+runtime/lora_runs/
+runtime/pagination_smoke/
+runtime/training_v*.db
+runtime/training_pagination_smoke.db
+*.joblib
+
 # Temp
 .commit_marker_*
 /tmp/
