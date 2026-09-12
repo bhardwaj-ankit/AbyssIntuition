@@ -138,28 +138,72 @@ def _derivative_or_nan(features: dict[str, Any], oi_rows: int, taker_rows: int,
     return out
 
 
-def _row_features(payload: dict[str, Any]) -> dict[str, Any]:
+def _row_features(
+    payload: dict[str, Any], *, include_proxy_liquidity: bool = False,
+    include_liquidation_proxy: bool = True,
+) -> dict[str, Any]:
     features: dict[str, Any] = {}
     dq = payload.get("data_quality_context", {}) or {}
+    raw_features = payload.get("features", {}) or {}
 
-    # Core market microstructure / momentum (kline-derived: fully available).
-    for key in ("spread_bps", "imbalance_l1", "imbalance_l5", "imbalance_l10",
-                "weighted_depth_imbalance", "buy_flow_ratio", "short_volatility_bps",
-                "micro_momentum_bps", "intraday_momentum_bps", "volume_zscore",
-                "liquidity_gap_bps", "funding_rate_bps", "basis_bps"):
-        value = payload.get("features", {}).get(key)
+    # Kline-derived market state. These fields have identical semantics in
+    # historical and live operation.
+    for key in ("short_volatility_bps", "micro_momentum_bps",
+                "intraday_momentum_bps", "volume_zscore"):
+        value = raw_features.get(key)
         if isinstance(value, (int, float)):
             features[f"feat.{key}"] = float(value)
     for cat in ("htf_bias", "htf_regime"):
-        value = payload.get("features", {}).get(cat)
+        value = raw_features.get(cat)
         if isinstance(value, (int, float)):
             features[f"feat.{cat}"] = float(value)
         elif isinstance(value, str):
             features[f"feat.{cat}"] = value
 
+    # Historical backfills without depth/trade archives synthesize these
+    # values from candles. They must not share columns with real observations,
+    # otherwise an offline model sees a different distribution in production.
+    order_book_source = str(raw_features.get("order_book_source") or "unknown").lower()
+    trade_flow_source = str(raw_features.get("trade_flow_source") or "unknown").lower()
+    book_keys = ("spread_bps", "imbalance_l1", "imbalance_l5", "imbalance_l10",
+                 "weighted_depth_imbalance", "liquidity_gap_bps")
+    if order_book_source == "real":
+        for key in book_keys:
+            value = raw_features.get(key)
+            if isinstance(value, (int, float)):
+                features[f"book.{key}"] = float(value)
+    elif order_book_source == "proxy" and include_proxy_liquidity:
+        for key in book_keys:
+            value = raw_features.get(key)
+            if isinstance(value, (int, float)):
+                features[f"proxy_book.{key}"] = float(value)
+
+    buy_flow_ratio = raw_features.get("buy_flow_ratio")
+    if trade_flow_source == "real" and isinstance(buy_flow_ratio, (int, float)):
+        features["orderflow.buy_flow_ratio"] = float(buy_flow_ratio)
+    elif (
+        trade_flow_source == "proxy"
+        and include_proxy_liquidity
+        and isinstance(buy_flow_ratio, (int, float))
+    ):
+        features["proxy_orderflow.buy_flow_ratio"] = float(buy_flow_ratio)
+
+    # Funding and basis are not available across the full REST backfill range.
+    # Keep them missing when no source row existed at the decision timestamp;
+    # the model can branch on NaN without confusing absence with a true zero.
+    for key, quality_key in (
+        ("funding_rate_bps", "funding_rows"),
+        ("basis_bps", "basis_rows"),
+    ):
+        value = raw_features.get(key)
+        if int(dq.get(quality_key, 0) or 0) > 0 and isinstance(value, (int, float)):
+            features[f"feat.{key}"] = float(value)
+        else:
+            features[f"feat.{key}"] = float("nan")
+
     # Derivatives with explicit missingness (30-day retention reality).
     features.update(_derivative_or_nan(
-        payload.get("features", {}),
+        raw_features,
         int(dq.get("oi_rows", 0) or 0),
         int(dq.get("taker_rows", 0) or 0),
         int(dq.get("global_ratio_rows", 0) or 0),
@@ -179,9 +223,10 @@ def _row_features(payload: dict[str, Any]) -> dict[str, Any]:
 
     # Liquidation map: keep only the confidence scalar (dominant_pull is an
     # engine verdict and is excluded as leakage).
-    liq = payload.get("liquidation_map", {}) or {}
-    if isinstance(liq.get("confidence"), (int, float)):
-        features["liq.confidence"] = float(liq["confidence"])
+    if include_liquidation_proxy:
+        liq = payload.get("liquidation_map", {}) or {}
+        if isinstance(liq.get("confidence"), (int, float)):
+            features["liq.confidence"] = float(liq["confidence"])
 
     # Session as cyclical encodings so 23:00 and 00:00 are neighbours.
     session = payload.get("session_context", {}) or {}
@@ -233,21 +278,137 @@ def _attach_vision(features: dict[str, Any], store: Any, symbol: str, event_ts: 
         features["deriv.oi_value_log"] = round(math.log1p(float(row["oi_value"])), 6)
 
 
+def _attach_vision_supplemental(
+    features: dict[str, Any], store: Any, symbol: str, event_ts: int
+) -> None:
+    depth = store.nearest_depth(symbol, event_ts)
+    if depth:
+        for key in ("imbalance_020", "imbalance_1", "imbalance_5", "concentration_020"):
+            features[f"archive_book.{key}"] = float(depth[key])
+        for key in ("total_notional_020", "total_notional_1", "total_notional_5"):
+            features[f"archive_book.{key}_log"] = math.log1p(float(depth[key]))
+    funding = store.nearest_funding(symbol, event_ts)
+    if funding:
+        features["feat.funding_rate_bps"] = float(funding["funding_rate"]) * 10_000
+        features["deriv.funding_interval_hours"] = float(funding["funding_interval_hours"])
+    trade_flow = store.nearest_trade_flow(symbol, event_ts)
+    if trade_flow:
+        buy_ratio = float(trade_flow["buy_flow_ratio"])
+        sell_quote = float(trade_flow["taker_sell_quote"])
+        features["orderflow.buy_flow_ratio"] = buy_ratio
+        features["orderflow.taker_imbalance"] = (2.0 * buy_ratio) - 1.0
+        features["orderflow.taker_buy_sell_ratio"] = (
+            float(trade_flow["taker_buy_quote"]) / sell_quote
+            if sell_quote > 0
+            else math.nan
+        )
+        features["archive_flow.quote_volume_log"] = math.log1p(
+            float(trade_flow["quote_volume"])
+        )
+        features["archive_flow.trade_count_log"] = math.log1p(
+            int(trade_flow["trade_count"])
+        )
+        features["archive_flow.avg_trade_notional_log"] = math.log1p(
+            float(trade_flow["avg_trade_notional"])
+        )
+        features["archive_flow.range_bps"] = float(trade_flow["range_bps"])
+        features["archive_flow.return_bps"] = float(trade_flow["return_bps"])
+
+
+def _attach_open_onchain(
+    features: dict[str, Any], store: Any, symbol: str, event_ts: int
+) -> None:
+    from liquidity_signal.data.open_onchain import SYMBOL_NETWORK
+
+    network = SYMBOL_NETWORK.get(symbol.upper())
+    if not network:
+        return
+    row = store.nearest_completed_day(network, event_ts)
+    if not row:
+        return
+    for key in ("active_addresses", "tx_count", "market_cap_usd", "chain_tvl_usd"):
+        value = row.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            features[f"onchain.{key}_log"] = math.log1p(float(value))
+            change = store.change_pct(network, int(row["ts"]), key, days=7)
+            if change is not None:
+                features[f"onchain.{key}_change_7d_pct"] = float(change)
+
+
+def _attach_liquidation_flow(
+    features: dict[str, Any], store: Any, symbol: str, event_ts: int, mark_price: float
+) -> None:
+    features.update(
+        store.liquidation_flow_features(symbol, event_ts, mark_price)
+    )
+
+
+def _attach_hyperliquid_archive_flow(
+    features: dict[str, Any], store: Any, symbol: str, event_ts: int, mark_price: float
+) -> None:
+    features.update(
+        store.hyperliquid_archive_flow_features(symbol, event_ts, mark_price)
+    )
+
+
+def _attach_cryptohft_archive_flow(
+    features: dict[str, Any], store: Any, symbol: str, event_ts: int, mark_price: float
+) -> None:
+    features.update(
+        store.cryptohft_archive_flow_features(symbol, event_ts, mark_price)
+    )
+
+
 def _is_nan(value: Any) -> bool:
     return isinstance(value, float) and math.isnan(value)
 
 
 def _load_dataset(db_path: str, horizon_minutes: int,
                   btc_symbol: str = "BTCUSDT",
-                  vision_db: str | None = None) -> list[dict[str, Any]]:
+                  vision_db: str | None = None,
+                  onchain_db: str | None = None,
+                  liquidation_db: str | None = None,
+                  cross_venue_db: str | None = None,
+                  data_profile: str = "standard") -> list[dict[str, Any]]:
+    archive_profile = data_profile.startswith("archive_")
+    uses_hyperliquid = "hyperliquid" in data_profile
+    uses_cryptohft = "cryptohft" in data_profile
+    uses_cross_venue = "cross_venue" in data_profile
+    if data_profile == "archive_only" and liquidation_db is not None:
+        raise ValueError("archive_only profile cannot load a liquidation database")
+    if uses_hyperliquid and liquidation_db is None:
+        raise ValueError("archive_hyperliquid profile requires a liquidation database")
+    if uses_cryptohft and liquidation_db is None:
+        raise ValueError("archive_cryptohft profile requires a liquidation database")
+    if uses_cross_venue and (
+        cross_venue_db is None or not Path(cross_venue_db).exists()
+    ):
+        raise ValueError("cross-venue archive profile requires a cross-venue database")
     con = sqlite3.connect(db_path)
     con.row_factory = sqlite3.Row
     cur = con.cursor()
 
     vision_store = None
+    supplemental_store = None
     if vision_db and Path(vision_db).exists():
         from liquidity_signal.data.binance_vision import VisionMetricsStore
+        from liquidity_signal.data.binance_vision_supplemental import VisionSupplementalStore
         vision_store = VisionMetricsStore(vision_db)
+        supplemental_store = VisionSupplementalStore(vision_db)
+    onchain_store = None
+    if onchain_db and Path(onchain_db).exists():
+        from liquidity_signal.data.open_onchain import OpenOnchainStore
+        onchain_store = OpenOnchainStore(onchain_db)
+    liquidation_store = None
+    if liquidation_db and Path(liquidation_db).exists():
+        from liquidity_signal.service.liquidation_store import LiquidationStore
+
+        liquidation_store = LiquidationStore(Path(liquidation_db))
+    cross_venue_store = None
+    if cross_venue_db and Path(cross_venue_db).exists():
+        from liquidity_signal.data.cross_venue import CrossVenueStore
+
+        cross_venue_store = CrossVenueStore(cross_venue_db)
 
     # Cross-asset lookup: BTC market state indexed by event_ts.
     btc_by_ts: dict[int, dict[str, Any]] = {}
@@ -267,16 +428,30 @@ def _load_dataset(db_path: str, horizon_minutes: int,
     rows: list[dict[str, Any]] = []
     query = """
         SELECT s.snapshot_id, s.symbol, s.event_ts, s.mark_price, s.raw_json AS snap_json,
-               l.label_action, l.terminal_price
+               l.label_action, l.terminal_price, l.raw_json AS label_json
         FROM training_labels l
         JOIN training_snapshots s ON s.snapshot_id = l.snapshot_id
         WHERE l.horizon_minutes = ? AND l.status = 'RESOLVED'
-              AND l.terminal_price > 0 AND s.mark_price > 0
+              AND s.mark_price > 0
         ORDER BY s.event_ts ASC
     """
     for row in cur.execute(query, (horizon_minutes,)):
         payload = json.loads(row["snap_json"]).get("raw_payload", {})
-        features = _row_features(payload)
+        features = _row_features(
+            payload,
+            include_liquidation_proxy=not archive_profile,
+        )
+
+        label_payload: dict[str, Any] = {}
+        if row["label_json"]:
+            try:
+                parsed_label = json.loads(row["label_json"])
+                if isinstance(parsed_label, dict):
+                    label_payload = parsed_label
+            except (TypeError, json.JSONDecodeError):
+                label_payload = {}
+        if label_payload.get("barrier_ambiguous") is True:
+            continue
 
         mark = float(row["mark_price"])
         event_ts = int(row["event_ts"])
@@ -293,18 +468,59 @@ def _load_dataset(db_path: str, horizon_minutes: int,
 
         if vision_store is not None:
             _attach_vision(features, vision_store, row["symbol"], event_ts)
+        if supplemental_store is not None:
+            _attach_vision_supplemental(features, supplemental_store, row["symbol"], event_ts)
+        if onchain_store is not None:
+            _attach_open_onchain(features, onchain_store, row["symbol"], event_ts)
+        if cross_venue_store is not None:
+            from liquidity_signal.data.cross_venue import attach_cross_venue_features
 
-        forward_return_bps = ((float(row["terminal_price"]) - mark) / mark) * 10_000
+            attach_cross_venue_features(
+                features, cross_venue_store, row["symbol"], event_ts
+            )
+        if liquidation_store is not None:
+            if uses_cryptohft:
+                _attach_cryptohft_archive_flow(
+                    features, liquidation_store, row["symbol"], event_ts, mark
+                )
+            if uses_hyperliquid:
+                _attach_hyperliquid_archive_flow(
+                    features, liquidation_store, row["symbol"], event_ts, mark
+                )
+            if not uses_cryptohft and not uses_hyperliquid:
+                _attach_liquidation_flow(
+                    features, liquidation_store, row["symbol"], event_ts, mark
+                )
+
+        horizon_close = label_payload.get("horizon_close_price")
+        target_source = "horizon_close_price"
+        if not isinstance(horizon_close, (int, float)) or horizon_close <= 0:
+            # Backwards compatibility for v1 datasets. Those rows used the
+            # first barrier candle close, so reports make the fallback visible.
+            horizon_close = row["terminal_price"]
+            target_source = "legacy_terminal_price"
+        if not isinstance(horizon_close, (int, float)) or horizon_close <= 0:
+            continue
+        forward_return_bps = ((float(horizon_close) - mark) / mark) * 10_000
         rows.append({
             "event_ts": event_ts,
             "symbol": row["symbol"],
             "features": features,
             "direction": str(row["label_action"]),
             "return_bps": round(forward_return_bps, 4),
+            "target_source": target_source,
         })
     con.close()
     if vision_store is not None:
         vision_store.close()
+    if supplemental_store is not None:
+        supplemental_store.close()
+    if onchain_store is not None:
+        onchain_store.close()
+    if liquidation_store is not None:
+        liquidation_store.close()
+    if cross_venue_store is not None:
+        cross_venue_store.close()
     return rows
 
 
@@ -325,6 +541,40 @@ def _chronological_split(rows: list[dict[str, Any]], horizon_minutes: int,
                   if r["event_ts"] + embargo_ms <= test_start_ts]
     test = ordered[test_start:]
     return train, validation, test
+
+
+def _walk_forward_windows(
+    min_ts: int,
+    max_ts: int,
+    *,
+    train_days: int,
+    validation_days: int,
+    test_days: int,
+    step_days: int,
+) -> list[dict[str, int]]:
+    """Build rolling windows whose test segments never overlap."""
+    if min(train_days, validation_days, test_days, step_days) <= 0:
+        raise ValueError("Walk-forward durations must all be positive.")
+    if step_days < test_days:
+        raise ValueError("step_days must be >= test_days so test windows do not overlap.")
+    day_ms = 86_400_000
+    windows: list[dict[str, int]] = []
+    start = int(min_ts)
+    inclusive_limit = int(max_ts) + 1
+    while True:
+        validation_start = start + train_days * day_ms
+        test_start = validation_start + validation_days * day_ms
+        end = test_start + test_days * day_ms
+        if end > inclusive_limit:
+            break
+        windows.append({
+            "start_ts": start,
+            "validation_start_ts": validation_start,
+            "test_start_ts": test_start,
+            "end_ts": end,
+        })
+        start += step_days * day_ms
+    return windows
 
 
 # ---------------------------------------------------------------------------
@@ -386,6 +636,14 @@ def train_gbdt_dual_head(
     horizon_minutes: int = 60,
     random_seed: int = 42,
     vision_db: str | None = None,
+    onchain_db: str | None = None,
+    liquidation_db: str | None = None,
+    cross_venue_db: str | None = None,
+    data_profile: str = "standard",
+    window_start_ts: int | None = None,
+    validation_start_ts: int | None = None,
+    test_start_ts: int | None = None,
+    window_end_ts: int | None = None,
 ) -> dict[str, Any]:
     """Train and evaluate the two-head model; write artefacts + a gate report."""
     import joblib
@@ -393,10 +651,36 @@ def train_gbdt_dual_head(
     import pandas as pd
     from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
 
-    rows = _load_dataset(db_path, horizon_minutes, vision_db=vision_db)
+    rows = _load_dataset(
+        db_path, horizon_minutes, vision_db=vision_db, onchain_db=onchain_db,
+        liquidation_db=liquidation_db, cross_venue_db=cross_venue_db,
+        data_profile=data_profile,
+    )
+    if window_start_ts is not None:
+        rows = [row for row in rows if row["event_ts"] >= window_start_ts]
+    if window_end_ts is not None:
+        rows = [row for row in rows if row["event_ts"] < window_end_ts]
     if len(rows) < 200:
         raise ValueError(f"Only {len(rows)} resolved rows for {horizon_minutes}m; need >=200.")
-    train, validation, test = _chronological_split(rows, horizon_minutes)
+    explicit_split = validation_start_ts is not None or test_start_ts is not None
+    if explicit_split:
+        if validation_start_ts is None or test_start_ts is None:
+            raise ValueError("Both validation_start_ts and test_start_ts are required.")
+        if validation_start_ts >= test_start_ts:
+            raise ValueError("validation_start_ts must be earlier than test_start_ts.")
+        embargo_ms = horizon_minutes * 60_000
+        train = [
+            row for row in rows
+            if row["event_ts"] + embargo_ms <= validation_start_ts
+        ]
+        validation = [
+            row for row in rows
+            if validation_start_ts <= row["event_ts"]
+            and row["event_ts"] + embargo_ms <= test_start_ts
+        ]
+        test = [row for row in rows if row["event_ts"] >= test_start_ts]
+    else:
+        train, validation, test = _chronological_split(rows, horizon_minutes)
     if not validation or not test:
         raise ValueError("Empty validation/test split; need a longer history.")
 
@@ -532,17 +816,34 @@ def train_gbdt_dual_head(
             "margin": sel_margin,
             "horizon_minutes": horizon_minutes,
             "task": "gbdt_dual_head",
+            "feature_contract_version": 4,
+            "data_profile": data_profile,
         },
         target / "model.joblib",
     )
     summary = {
         "db_path": db_path,
         "vision_db": vision_db,
+        "onchain_db": onchain_db,
+        "liquidation_db": liquidation_db,
+        "cross_venue_db": cross_venue_db,
+        "data_profile": data_profile,
         "horizon_minutes": horizon_minutes,
-        "split": "test",
+        "split": "walk_forward_fold" if explicit_split else "test",
         "base_model": "sklearn.HistGradientBoosting",
         "adapter_path": str(target),
         "rows": {"train": len(train), "validation": len(validation), "test": len(test)},
+        "target_sources": {
+            source: sum(row["target_source"] == source for row in rows)
+            for source in sorted({row["target_source"] for row in rows})
+        },
+        "feature_contract_version": 4,
+        "window": {
+            "start_ts": window_start_ts,
+            "validation_start_ts": validation_start_ts,
+            "test_start_ts": test_start_ts,
+            "end_ts": window_end_ts,
+        } if explicit_split else None,
         "features": len(columns),
         "categorical_features": len(categorical),
         "policy": {"threshold": sel_threshold, "margin": sel_margin},
@@ -560,4 +861,113 @@ def train_gbdt_dual_head(
         ),
     }
     (target / "evaluation.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    return summary
+
+
+def walk_forward_gbdt(
+    db_path: str,
+    output_dir: str,
+    *,
+    horizon_minutes: int = 60,
+    vision_db: str | None = None,
+    onchain_db: str | None = None,
+    liquidation_db: str | None = None,
+    cross_venue_db: str | None = None,
+    data_profile: str = "standard",
+    train_days: int = 90,
+    validation_days: int = 15,
+    test_days: int = 15,
+    step_days: int = 30,
+    random_seed: int = 42,
+) -> dict[str, Any]:
+    """Train rolling folds and require stable performance across all of them."""
+    rows = _load_dataset(
+        db_path, horizon_minutes, vision_db=vision_db, onchain_db=onchain_db,
+        liquidation_db=liquidation_db, cross_venue_db=cross_venue_db,
+        data_profile=data_profile,
+    )
+    if not rows:
+        raise ValueError(f"No resolved rows for {horizon_minutes}m.")
+    windows = _walk_forward_windows(
+        min(row["event_ts"] for row in rows),
+        max(row["event_ts"] for row in rows),
+        train_days=train_days,
+        validation_days=validation_days,
+        test_days=test_days,
+        step_days=step_days,
+    )
+    if len(windows) < 2:
+        raise ValueError("Need enough history for at least two walk-forward folds.")
+
+    target = Path(output_dir)
+    target.mkdir(parents=True, exist_ok=True)
+    folds: list[dict[str, Any]] = []
+    for index, window in enumerate(windows, start=1):
+        fold = train_gbdt_dual_head(
+            db_path,
+            str(target / f"fold-{index}"),
+            horizon_minutes=horizon_minutes,
+            random_seed=random_seed,
+            vision_db=vision_db,
+            onchain_db=onchain_db,
+            liquidation_db=liquidation_db,
+            cross_venue_db=cross_venue_db,
+            data_profile=data_profile,
+            window_start_ts=window["start_ts"],
+            validation_start_ts=window["validation_start_ts"],
+            test_start_ts=window["test_start_ts"],
+            window_end_ts=window["end_ts"],
+        )
+        fold["fold"] = index
+        folds.append(fold)
+
+    def values(group: str, metric: str) -> list[float]:
+        return [
+            float(fold[group][metric])
+            for fold in folds
+            if fold[group].get(metric) is not None
+        ]
+
+    aggregate: dict[str, Any] = {}
+    for group, metric in (
+        ("classification_test", "directional_precision"),
+        ("classification_test", "directional_coverage"),
+        ("classification_test", "balanced_accuracy"),
+        ("regression_test", "sign_hit_rate"),
+        ("regression_test", "range_coverage"),
+    ):
+        observed = values(group, metric)
+        aggregate[metric] = {
+            "mean": round(sum(observed) / len(observed), 4) if observed else None,
+            "min": round(min(observed), 4) if observed else None,
+            "max": round(max(observed), 4) if observed else None,
+        }
+
+    summary = {
+        "db_path": db_path,
+        "vision_db": vision_db,
+        "onchain_db": onchain_db,
+        "liquidation_db": liquidation_db,
+        "cross_venue_db": cross_venue_db,
+        "data_profile": data_profile,
+        "horizon_minutes": horizon_minutes,
+        "split": "walk_forward",
+        "feature_contract_version": 4,
+        "configuration": {
+            "train_days": train_days,
+            "validation_days": validation_days,
+            "test_days": test_days,
+            "step_days": step_days,
+        },
+        "fold_count": len(folds),
+        "aggregate": aggregate,
+        "folds": folds,
+        "deployment_gate": {
+            "passed": all(fold["deployment_gate"]["passed"] for fold in folds),
+            "requirement": "Every non-overlapping walk-forward fold must pass.",
+        },
+    }
+    (target / "walk_forward_evaluation.json").write_text(
+        json.dumps(summary, indent=2), encoding="utf-8"
+    )
     return summary

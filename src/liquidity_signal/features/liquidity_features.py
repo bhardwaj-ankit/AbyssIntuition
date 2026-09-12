@@ -266,4 +266,6 @@ def build_liquidity_features(
         top_trader_position_ratio=_last_value(top_position_ratio_rows or [], "longShortRatio", default=1.0),
         htf_bias=max(-1.0, min(1.0, htf_bias)),
         htf_regime=htf_regime,
+        order_book_source="real" if has_order_book else "proxy",
+        trade_flow_source="real" if trades else "proxy",
     )

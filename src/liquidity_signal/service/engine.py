@@ -364,53 +364,76 @@ class SignalEngine:
         max_up_pct = 0.0
         max_down_pct = 0.0
         resolved_action = Direction.FLAT
-        terminal_price = self._safe_float(path[-1][4], default=entry_price)
+        barrier_first_hit: Direction | None = None
+        barrier_hit_ts: int | None = None
+        barrier_hit_price: float | None = None
+        barrier_ambiguous = False
+        horizon_close_price = self._safe_float(path[-1][4], default=entry_price)
 
         for candle in path:
-            open_price = self._safe_float(candle[1], default=entry_price)
             high_price = self._safe_float(candle[2], default=entry_price)
             low_price = self._safe_float(candle[3], default=entry_price)
-            close_price = self._safe_float(candle[4], default=entry_price)
             max_up_pct = max(max_up_pct, ((high_price - entry_price) / entry_price) * 100.0)
             max_down_pct = max(max_down_pct, ((entry_price - low_price) / entry_price) * 100.0)
 
+            if barrier_first_hit is not None or barrier_ambiguous:
+                continue
             upper_hit = high_price >= label.upper_barrier_price
             lower_hit = low_price <= label.lower_barrier_price
             if upper_hit and lower_hit:
                 # One-minute OHLC cannot reveal which barrier was hit first.
-                # Treat the ambiguous candle as no-trade instead of inventing
-                # an ordering from its close direction.
-                resolved_action = Direction.FLAT
-                terminal_price = close_price
-                break
-            if upper_hit:
-                resolved_action = Direction.LONG
-                terminal_price = close_price
-                break
-            if lower_hit:
-                resolved_action = Direction.SHORT
-                terminal_price = close_price
-                break
+                barrier_ambiguous = True
+                barrier_hit_ts = int(candle[0])
+            elif upper_hit:
+                barrier_first_hit = Direction.LONG
+                barrier_hit_ts = int(candle[0])
+                barrier_hit_price = label.upper_barrier_price
+            elif lower_hit:
+                barrier_first_hit = Direction.SHORT
+                barrier_hit_ts = int(candle[0])
+                barrier_hit_price = label.lower_barrier_price
 
-        if resolved_action == Direction.FLAT:
+        if barrier_first_hit is not None:
+            resolved_action = barrier_first_hit
+        elif not barrier_ambiguous:
             terminal_move_pct = self._safe_float(label.raw_payload.get("terminal_move_pct"), default=0.10)
-            terminal_return_pct = ((terminal_price - entry_price) / entry_price) * 100.0
+            terminal_return_pct = ((horizon_close_price - entry_price) / entry_price) * 100.0
             if terminal_return_pct >= terminal_move_pct:
                 resolved_action = Direction.LONG
             elif terminal_return_pct <= -terminal_move_pct:
                 resolved_action = Direction.SHORT
+
+        horizon_return_bps = ((horizon_close_price - entry_price) / entry_price) * 10_000.0
+        if resolved_action == Direction.LONG:
+            max_favorable_excursion_pct = max_up_pct
+            max_adverse_excursion_pct = max_down_pct
+        elif resolved_action == Direction.SHORT:
+            max_favorable_excursion_pct = max_down_pct
+            max_adverse_excursion_pct = max_up_pct
+        else:
+            max_favorable_excursion_pct = None
+            max_adverse_excursion_pct = None
 
         return label.model_copy(
             update={
                 "status": "RESOLVED",
                 "label_action": resolved_action,
                 "resolved_at": now_ms,
-                "terminal_price": terminal_price,
+                "barrier_first_hit": barrier_first_hit,
+                "barrier_hit_ts": barrier_hit_ts,
+                "barrier_hit_price": barrier_hit_price,
+                "barrier_ambiguous": barrier_ambiguous,
+                "horizon_close_price": horizon_close_price,
+                "horizon_return_bps": horizon_return_bps,
+                "max_favorable_excursion_pct": max_favorable_excursion_pct,
+                "max_adverse_excursion_pct": max_adverse_excursion_pct,
+                "terminal_price": horizon_close_price,
                 "max_up_pct": max_up_pct,
                 "max_down_pct": max_down_pct,
                 "raw_payload": {
                     **label.raw_payload,
-                    "resolved_by": "triple_barrier_path",
+                    "label_version": "triple-barrier-v2",
+                    "resolved_by": "triple_barrier_path_v2",
                 },
             }
         )
@@ -436,7 +459,7 @@ class SignalEngine:
 
             path = [
                 candle for candle in klines
-                if label.event_ts <= int(candle[0]) <= label.expires_at
+                if label.event_ts <= int(candle[0]) < label.expires_at
             ]
             updated = self._resolve_training_label_from_path(label, path, now_ms=now_ms)
             if updated is None:
@@ -1533,7 +1556,9 @@ class SignalEngine:
         rows: list[list[Any]], start_ms: int, end_ms: int
     ) -> list[list[Any]]:
         start = bisect_left(rows, start_ms, key=lambda row: int(row[0]))
-        end = bisect_right(rows, end_ms, key=lambda row: int(row[0]))
+        # end_ms is the decision horizon boundary. A candle opening exactly at
+        # that timestamp closes after the horizon and must not enter the label.
+        end = bisect_left(rows, end_ms, key=lambda row: int(row[0]))
         return rows[start:end]
 
     def _rows_through_time(self, rows: list[dict[str, Any]], time_ms: int, limit: int) -> list[dict[str, Any]]:
@@ -2615,7 +2640,6 @@ class SignalEngine:
         third = source[-3]
         last_range = max(last.high - last.low, 1e-9)
         last_body = abs(last.close - last.open)
-        prev_body = abs(prev.close - prev.open)
         baseline_body = sum(abs(candle.close - candle.open) for candle in source[-12:]) / max(len(source[-12:]), 1)
 
         if (

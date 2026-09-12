@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, List
+from typing import Any, List, Literal
 
 from pydantic import BaseModel, Field
 
@@ -35,6 +35,12 @@ class LiquidityFeatures(BaseModel):
     top_trader_position_ratio: float = 1.0
     htf_bias: float = Field(default=0.0, ge=-1.0, le=1.0)
     htf_regime: str = "BALANCED"
+    # Provenance is part of the feature contract. Historical backfills without
+    # depth/trade archives use candle-derived proxies, while live requests use
+    # exchange observations. Downstream models must never treat those as the
+    # same feature distribution.
+    order_book_source: Literal["real", "proxy", "unknown"] = "unknown"
+    trade_flow_source: Literal["real", "proxy", "unknown"] = "unknown"
 
 
 class SignalResult(BaseModel):
@@ -377,6 +383,16 @@ class TrainingSnapshotLabel(BaseModel):
     resolved_at: int | None = Field(default=None, ge=0)
     upper_barrier_price: float
     lower_barrier_price: float
+    barrier_first_hit: Direction | None = None
+    barrier_hit_ts: int | None = Field(default=None, ge=0)
+    barrier_hit_price: float | None = None
+    barrier_ambiguous: bool = False
+    horizon_close_price: float | None = None
+    horizon_return_bps: float | None = None
+    max_favorable_excursion_pct: float | None = None
+    max_adverse_excursion_pct: float | None = None
+    # Kept for backwards compatibility with v1 datasets. New labels set this
+    # to the true horizon close, not the close of the first barrier candle.
     terminal_price: float | None = None
     max_up_pct: float = 0.0
     max_down_pct: float = 0.0

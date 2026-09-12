@@ -22,7 +22,7 @@ Default market: `BTCUSDT`.
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .[dev]
+pip install -e ".[dev,ml]"
 ```
 
 ## Fresh Clone Setup
@@ -34,7 +34,7 @@ If you clone this repo onto a new machine and want the same local runtime data, 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .[dev]
+pip install -e ".[dev,ml]"
 ```
 
 2. Start the API once so the local SQLite store and runtime folders are created automatically:
@@ -294,16 +294,56 @@ Recommended production setup:
 4. Set a long random `API_ACCESS_TOKEN`.
 5. Keep `runtime/bybit_demo_config.json` only on the server, not in git.
 
+Archive-only model research can run immediately against the backfilled cohort:
+
+```powershell
+liquidity-signal train-archive-baseline
+liquidity-signal train-archive-baseline --include-cryptohft
+liquidity-signal train-archive-baseline --include-hyperliquid
+liquidity-signal train-archive-baseline --include-cross-venue
+```
+
+This profile excludes all liquidation-event and estimated liquidation-map
+features by default. The optional Hyperliquid variant admits only source-isolated
+archive fields with explicit missing-partition handling. Both remain separate
+from the forward CEX-enhanced model and cannot be promoted unless their
+leakage-safe walk-forward gates pass.
+
+The free cross-venue archive is populated or resumed with:
+
+```powershell
+liquidity-signal ingest-cross-venue `
+  --start 2026-02-06 --end 2026-08-05
+```
+
+It adds source-isolated Bybit trade/positioning/funding features and Binance
+spot-versus-perpetual flow context. Training fails closed until all selected
+families cover at least 95% of the real snapshot anchors.
+
+Recent Binance Futures and Bybit liquidation gaps can be recovered from the
+free hourly archive without double-counting live rows:
+
+```powershell
+liquidity-signal ingest-cryptohft-liquidations `
+  --start 2026-08-23T19:05:00Z `
+  --end 2026-09-08T17:55:00Z
+```
+
+The command checkpoints progress and provenance, but deliberately does not
+fabricate collector heartbeats or decision snapshots for an offline machine.
+
 Detailed internet-facing setup is documented in [deploy/INTERNET_SETUP.md](/Users/ankitbhardwaj/Documents/AbyssIntuition/deploy/INTERNET_SETUP.md).
 
 ## Documentation
 
 - [DATA_INGESTION.md](DATA_INGESTION.md) — external data platforms (integrated / to-integrate, free/paid) and refresh jobs
 - [PROGRESS.md](PROGRESS.md) — dated progress log for the ML re-architecture effort
+- [deploy/linux/ALWAYS_ON_DATA_COLLECTION.md](deploy/linux/ALWAYS_ON_DATA_COLLECTION.md) — always-on capture for live-only liquidation data
 
 Detailed docs live in [docs/](docs/):
 - [project-brief-solution-intent.md](docs/project-brief-solution-intent.md) — re-architecture toward a fine-tuned signal + price model, with measured data-readiness findings
 - [local-lora-training.md](docs/local-lora-training.md) — local LoRA training workflow
+- [historical-data-handoff-2026-09-12.md](docs/historical-data-handoff-2026-09-12.md) — recovery context, portable-SSD transfer, and remote historical workers
 - [MARKET_BEHAVIOR_FEATURE.md](docs/MARKET_BEHAVIOR_FEATURE.md) / [IMPLEMENTATION_SUMMARY.md](docs/IMPLEMENTATION_SUMMARY.md) — market-behavior feature
 - [liquidation-api-white-paper.md](docs/liquidation-api-white-paper.md) / [liquidation-api-trade-signal-guide.md](docs/liquidation-api-trade-signal-guide.md) — liquidation API
 - [trading-signal-research-api.md](docs/trading-signal-research-api.md) / [deep-research-report.md](docs/deep-research-report.md) — research notes

@@ -12,6 +12,7 @@ pytest.importorskip("pandas")
 
 from liquidity_signal.ai.gbdt_trainer import (  # noqa: E402
     _row_features,
+    _walk_forward_windows,
     train_gbdt_dual_head,
 )
 
@@ -32,6 +33,8 @@ def _make_payload(momentum_bps: float, regime: str, oi_present: bool) -> dict:
             "global_long_short_ratio": 2.0 if oi_present else 1.0,
             "htf_regime": regime,
             "htf_bias": 0.2,
+            "order_book_source": "proxy",
+            "trade_flow_source": "proxy",
         },
         # Leakage groups that must be excluded by the extractor.
         "scoring": {"confidence": 0.9, "raw_score": 3.2},
@@ -56,6 +59,7 @@ def _make_payload(momentum_bps: float, regime: str, oi_present: bool) -> dict:
             "taker_rows": 30 if oi_present else 0,
             "global_ratio_rows": 30 if oi_present else 0,
             "funding_rows": 30,
+            "basis_rows": 30,
         },
     }
 
@@ -98,10 +102,14 @@ def _seed_db(path, rows: int = 600) -> None:
                 (sid, symbol, event_ts, "BINANCE", "HISTORICAL", mark,
                  "LONG", 0.7, "HIGH", json.dumps(payload)),
             )
+            label_json = (
+                json.dumps({"horizon_close_price": terminal, "barrier_ambiguous": False})
+                if i % 2 == 0 else None
+            )
             cur.execute(
                 "INSERT INTO training_labels(snapshot_id,symbol,event_ts,horizon_minutes,"
-                "status,label_action,terminal_price) VALUES (?,?,?,?,?,?,?)",
-                (sid, symbol, event_ts, 60, "RESOLVED", label, terminal),
+                "status,label_action,terminal_price,raw_json) VALUES (?,?,?,?,?,?,?,?)",
+                (sid, symbol, event_ts, 60, "RESOLVED", label, terminal, label_json),
             )
     con.commit()
     con.close()
@@ -120,14 +128,79 @@ def test_extractor_excludes_leakage_and_absolute_prices():
     # Market features and cyclical session encodings survive.
     assert "feat.intraday_momentum_bps" in features
     assert "session.hour_sin" in features
+    # Candle proxies are excluded from the production feature contract.
+    assert not any(name.startswith("book.") for name in features)
+    assert not any(name.startswith("proxy_book.") for name in features)
+
+
+def test_extractor_routes_real_and_proxy_liquidity_to_distinct_columns():
+    real_payload = _make_payload(20.0, "MIXED_UP", oi_present=True)
+    real_payload["features"]["order_book_source"] = "real"
+    real_payload["features"]["trade_flow_source"] = "real"
+    real = _row_features(real_payload)
+    assert real["book.spread_bps"] == 1.2
+    assert real["orderflow.buy_flow_ratio"] == 0.5
+
+    proxy = _row_features(
+        _make_payload(20.0, "MIXED_UP", oi_present=True),
+        include_proxy_liquidity=True,
+    )
+    assert proxy["proxy_book.spread_bps"] == 1.2
+    assert proxy["proxy_orderflow.buy_flow_ratio"] == 0.5
+    assert "book.spread_bps" not in proxy
+
+
+def test_archive_profile_excludes_estimated_liquidation_proxy():
+    payload = _make_payload(20.0, "MIXED_UP", oi_present=True)
+
+    standard = _row_features(payload)
+    archive_only = _row_features(payload, include_liquidation_proxy=False)
+
+    assert standard["liq.confidence"] == 0.5
+    assert not any(name.startswith("liq.") for name in archive_only)
 
 
 def test_missing_derivatives_become_nan():
     absent = _row_features(_make_payload(20.0, "MIXED_UP", oi_present=False))
     assert math.isnan(absent["deriv.oi_change_pct"])
     assert math.isnan(absent["deriv.taker_buy_sell_ratio"])
+    absent_payload = _make_payload(20.0, "MIXED_UP", oi_present=True)
+    absent_payload["data_quality_context"]["funding_rows"] = 0
+    absent_payload["data_quality_context"]["basis_rows"] = 0
+    missing_rates = _row_features(absent_payload)
+    assert math.isnan(missing_rates["feat.funding_rate_bps"])
+    assert math.isnan(missing_rates["feat.basis_bps"])
     present = _row_features(_make_payload(20.0, "MIXED_UP", oi_present=True))
     assert not math.isnan(present["deriv.oi_change_pct"])
+
+
+def test_walk_forward_windows_have_non_overlapping_tests():
+    day = 86_400_000
+    windows = _walk_forward_windows(
+        0,
+        180 * day,
+        train_days=90,
+        validation_days=15,
+        test_days=15,
+        step_days=30,
+    )
+    assert len(windows) == 3
+    assert all(
+        current["end_ts"] <= following["test_start_ts"]
+        for current, following in zip(windows, windows[1:])
+    )
+
+
+def test_walk_forward_rejects_overlapping_test_windows():
+    with pytest.raises(ValueError, match="step_days"):
+        _walk_forward_windows(
+            0,
+            180 * 86_400_000,
+            train_days=90,
+            validation_days=15,
+            test_days=15,
+            step_days=10,
+        )
 
 
 def test_trainer_runs_and_writes_gated_artifacts(tmp_path):
@@ -140,6 +213,10 @@ def test_trainer_runs_and_writes_gated_artifacts(tmp_path):
     assert (out / "evaluation.json").exists()
     assert summary["split"] == "test"
     assert summary["rows"]["train"] > 0
+    assert summary["feature_contract_version"] == 4
+    assert set(summary["target_sources"]) == {
+        "horizon_close_price", "legacy_terminal_price"
+    }
     assert "deployment_gate" in summary
     assert set(summary["classification_test"]).issuperset(
         {"directional_precision", "directional_coverage", "balanced_accuracy"}

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+from liquidity_signal.models import Direction, TrainingSnapshotLabel
 from liquidity_signal.service.engine import SignalEngine
 from liquidity_signal.service.liquidation_store import LiquidationStore
 
@@ -132,4 +135,53 @@ def test_historical_features_only_use_closed_candles(tmp_path: Path) -> None:
 
     assert len(visible) == 1
     assert int(visible[0][0]) == 0
+    store.close()
+
+
+def test_training_label_separates_barrier_hit_from_horizon_close(tmp_path: Path) -> None:
+    store = LiquidationStore(db_path=tmp_path / "label_v2.db")
+    engine = SignalEngine(client=FakeHistoricalClient(), liquidation_store=store)
+    label = TrainingSnapshotLabel(
+        snapshot_id="sample",
+        symbol="BTCUSDT",
+        event_ts=0,
+        horizon_minutes=2,
+        expires_at=120_000,
+        upper_barrier_price=101.0,
+        lower_barrier_price=99.0,
+        raw_payload={"entry_price": 100.0, "terminal_move_pct": 0.1},
+    )
+    path = [
+        [0, "100", "101.2", "99.5", "100.4", "10"],
+        [60_000, "100.4", "102.2", "100.2", "102.0", "10"],
+    ]
+
+    resolved = engine._resolve_training_label_from_path(label, path, now_ms=120_000)
+
+    assert resolved is not None
+    assert resolved.label_action == Direction.LONG
+    assert resolved.barrier_first_hit == Direction.LONG
+    assert resolved.barrier_hit_ts == 0
+    assert resolved.barrier_hit_price == 101.0
+    assert resolved.horizon_close_price == 102.0
+    assert resolved.terminal_price == 102.0
+    assert resolved.horizon_return_bps == 200.0
+    assert resolved.max_favorable_excursion_pct == pytest.approx(2.2)
+    assert resolved.max_adverse_excursion_pct == pytest.approx(0.5)
+    assert resolved.raw_payload["label_version"] == "triple-barrier-v2"
+    store.close()
+
+
+def test_horizon_range_excludes_candle_opening_at_expiry(tmp_path: Path) -> None:
+    store = LiquidationStore(db_path=tmp_path / "exclusive_horizon.db")
+    engine = SignalEngine(client=FakeHistoricalClient(), liquidation_store=store)
+    rows = [
+        [0, "100", "101", "99", "100", "10"],
+        [60_000, "100", "101", "99", "100", "10"],
+        [120_000, "100", "150", "50", "140", "10"],
+    ]
+
+    path = engine._klines_in_open_time_range(rows, 0, 120_000)
+
+    assert [row[0] for row in path] == [0, 60_000]
     store.close()

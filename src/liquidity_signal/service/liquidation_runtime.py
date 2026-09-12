@@ -17,11 +17,18 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 
 
+_UNSET = object()
+_BINANCE_STREAM_ALIASES = {"PEPEUSDT": ("1000PEPEUSDT", 1000.0)}
+_BYBIT_STREAM_ALIASES = {"PEPEUSDT": ("1000PEPEUSDT", 1000.0)}
+
+
 def _opposite_execution_side(liquidated_side: Direction) -> str:
     return "SELL" if liquidated_side == Direction.LONG else "BUY"
 
 
-def _normalize_binance_force_order(payload: dict[str, Any]) -> LiquidationEventPoint | None:
+def _normalize_binance_force_order(
+    payload: dict[str, Any], requested_symbol: str | None = None
+) -> LiquidationEventPoint | None:
     order = payload.get("o")
     if not isinstance(order, dict):
         return None
@@ -34,11 +41,18 @@ def _normalize_binance_force_order(payload: dict[str, Any]) -> LiquidationEventP
     else:
         return None
 
-    symbol = str(order.get("s", "")).upper()
+    exchange_symbol = str(order.get("s", "")).upper()
+    symbol = requested_symbol.upper() if requested_symbol else exchange_symbol
     ts = int(order.get("T", payload.get("E", 0)))
     qty = float(order.get("z", order.get("q", 0.0)))
     price = float(order.get("ap", order.get("p", 0.0)))
-    if not symbol or ts <= 0 or qty <= 0.0 or price <= 0.0:
+    alias = _BINANCE_STREAM_ALIASES.get(symbol)
+    if alias and exchange_symbol == alias[0]:
+        price /= alias[1]
+        qty *= alias[1]
+    elif requested_symbol and exchange_symbol != symbol:
+        return None
+    if not exchange_symbol or ts <= 0 or qty <= 0.0 or price <= 0.0:
         return None
 
     return LiquidationEventPoint(
@@ -51,11 +65,15 @@ def _normalize_binance_force_order(payload: dict[str, Any]) -> LiquidationEventP
         notional=price * qty,
         timestamp=ts,
         received_at=_now_ms(),
-        exchange_event_id=f"binance:{symbol}:{ts}:{execution_side}:{qty}:{price}",
+        exchange_event_id=(
+            f"binance:{exchange_symbol}:{ts}:{execution_side}:{qty}:{price}"
+        ),
     )
 
 
-def _normalize_bybit_liquidation(payload: dict[str, Any]) -> list[LiquidationEventPoint]:
+def _normalize_bybit_liquidation(
+    payload: dict[str, Any], requested_symbol: str | None = None
+) -> list[LiquidationEventPoint]:
     rows = payload.get("data", [])
     if not isinstance(rows, list):
         return []
@@ -72,11 +90,18 @@ def _normalize_bybit_liquidation(payload: dict[str, Any]) -> list[LiquidationEve
         else:
             continue
 
-        symbol = str(row.get("s", "")).upper()
+        exchange_symbol = str(row.get("s", "")).upper()
+        symbol = requested_symbol.upper() if requested_symbol else exchange_symbol
         ts = int(row.get("T", 0))
         qty = float(row.get("v", 0.0))
         price = float(row.get("p", 0.0))
-        if not symbol or ts <= 0 or qty <= 0.0 or price <= 0.0:
+        alias = _BYBIT_STREAM_ALIASES.get(symbol)
+        if alias and exchange_symbol == alias[0]:
+            price /= alias[1]
+            qty *= alias[1]
+        elif requested_symbol and exchange_symbol != symbol:
+            continue
+        if not exchange_symbol or ts <= 0 or qty <= 0.0 or price <= 0.0:
             continue
 
         events.append(
@@ -90,10 +115,42 @@ def _normalize_bybit_liquidation(payload: dict[str, Any]) -> list[LiquidationEve
                 notional=price * qty,
                 timestamp=ts,
                 received_at=_now_ms(),
-                exchange_event_id=f"bybit:{symbol}:{ts}:{side_raw}:{qty}:{price}",
+                exchange_event_id=(
+                    f"bybit:{exchange_symbol}:{ts}:{side_raw}:{qty}:{price}"
+                ),
             )
         )
     return events
+
+
+def qualify_capture_health(
+    rows: list[LiquidationStreamHealth],
+    observed_at_ms: int,
+    *,
+    binance_liveness_ms: int = 10_000,
+) -> list[LiquidationStreamHealth]:
+    """Require Binance's companion market heartbeat to prove routed delivery."""
+    qualified: list[LiquidationStreamHealth] = []
+    for row in rows:
+        stale_binance = (
+            row.source == "binance"
+            and row.connected
+            and (
+                row.last_message_ts is None
+                or observed_at_ms - row.last_message_ts > binance_liveness_ms
+            )
+        )
+        if stale_binance:
+            qualified.append(row.model_copy(update={
+                "connected": False,
+                "last_error": (
+                    "Binance market heartbeat is silent; liquidation route is not "
+                    "eligible for completeness."
+                ),
+            }))
+        else:
+            qualified.append(row)
+    return qualified
 
 
 class LiquidationRuntime:
@@ -113,8 +170,11 @@ class LiquidationRuntime:
 
     def close(self) -> None:
         self._stop.set()
+        # Give every stream the same shutdown window instead of waiting one
+        # second per symbol/source sequentially.
+        deadline = time.monotonic() + 2.0
         for thread in list(self._threads.values()):
-            thread.join(timeout=1.0)
+            thread.join(timeout=max(0.0, deadline - time.monotonic()))
 
     def ensure_symbol(self, symbol: str) -> None:
         normalized = symbol.upper()
@@ -188,7 +248,7 @@ class LiquidationRuntime:
         *,
         connected: bool | None = None,
         last_message_ts: int | None = None,
-        last_error: str | None = None,
+        last_error: str | None | object = _UNSET,
         reconnect_increment: bool = False,
     ) -> None:
         key = (source, symbol)
@@ -201,7 +261,7 @@ class LiquidationRuntime:
                 health.connected = connected
             if last_message_ts is not None:
                 health.last_message_ts = last_message_ts
-            if last_error is not None:
+            if last_error is not _UNSET:
                 health.last_error = last_error
             if reconnect_increment:
                 health.reconnects += 1
@@ -210,7 +270,13 @@ class LiquidationRuntime:
         asyncio.run(self._binance_stream_loop(symbol))
 
     async def _binance_stream_loop(self, symbol: str) -> None:
-        uri = f"wss://fstream.binance.com/ws/{symbol.lower()}@forceOrder"
+        stream_symbol = _BINANCE_STREAM_ALIASES.get(
+            symbol, (symbol, 1.0)
+        )[0].lower()
+        uri = (
+            "wss://fstream.binance.com/market/stream?streams="
+            f"{stream_symbol}@forceOrder/{stream_symbol}@markPrice@1s"
+        )
         while not self._stop.is_set():
             try:
                 async with websockets.connect(uri, ping_interval=20, ping_timeout=20) as ws:
@@ -220,9 +286,21 @@ class LiquidationRuntime:
                             raw = await asyncio.wait_for(ws.recv(), timeout=30.0)
                         except asyncio.TimeoutError:
                             continue
-                        payload = json.loads(raw)
-                        event = _normalize_binance_force_order(payload)
+                        message = json.loads(raw)
+                        payload = (
+                            message.get("data", message)
+                            if isinstance(message, dict)
+                            else {}
+                        )
                         self._set_health("binance", symbol, last_message_ts=_now_ms())
+                        stream = (
+                            str(message.get("stream", ""))
+                            if isinstance(message, dict)
+                            else ""
+                        )
+                        if stream and not stream.endswith("@forceOrder"):
+                            continue
+                        event = _normalize_binance_force_order(payload, symbol)
                         if event is not None:
                             self._append_event(event)
             except Exception as exc:
@@ -240,7 +318,8 @@ class LiquidationRuntime:
 
     async def _bybit_stream_loop(self, symbol: str) -> None:
         uri = "wss://stream.bybit.com/v5/public/linear"
-        topic = f"allLiquidation.{symbol}"
+        stream_symbol = _BYBIT_STREAM_ALIASES.get(symbol, (symbol, 1.0))[0]
+        topic = f"allLiquidation.{stream_symbol}"
         while not self._stop.is_set():
             try:
                 async with websockets.connect(uri, ping_interval=20, ping_timeout=20) as ws:
@@ -253,7 +332,7 @@ class LiquidationRuntime:
                             continue
                         payload = json.loads(raw)
                         self._set_health("bybit", symbol, last_message_ts=_now_ms())
-                        for event in _normalize_bybit_liquidation(payload):
+                        for event in _normalize_bybit_liquidation(payload, symbol):
                             self._append_event(event)
             except Exception as exc:
                 self._set_health(

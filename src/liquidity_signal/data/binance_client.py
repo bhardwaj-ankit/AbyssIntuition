@@ -175,6 +175,58 @@ class BinanceFuturesClient:
     def get_funding_rates(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
         return self._get_json("/fapi/v1/fundingRate", params={"symbol": symbol, "limit": limit})
 
+    def get_funding_rate_history(
+        self,
+        symbol: str,
+        start_time: int,
+        end_time: int,
+        *,
+        limit_per_request: int = 1000,
+    ) -> List[Dict[str, Any]]:
+        """Fetch the complete inclusive funding range from Binance's public API."""
+        if end_time < start_time:
+            raise ValueError("end_time must be greater than or equal to start_time")
+        limit = max(1, min(int(limit_per_request), 1000))
+        cursor = int(start_time)
+        rows: list[dict[str, Any]] = []
+        while cursor <= end_time:
+            batch = self._get_json(
+                "/fapi/v1/fundingRate",
+                params={
+                    "symbol": symbol,
+                    "startTime": cursor,
+                    "endTime": int(end_time),
+                    "limit": limit,
+                },
+            )
+            if not isinstance(batch, list) or not batch:
+                break
+            rows.extend(row for row in batch if isinstance(row, dict))
+            timestamps = []
+            for row in batch:
+                try:
+                    timestamps.append(int(row["fundingTime"]))
+                except (KeyError, TypeError, ValueError):
+                    continue
+            if not timestamps:
+                break
+            next_cursor = max(timestamps) + 1
+            if next_cursor <= cursor:
+                break
+            cursor = next_cursor
+            if len(batch) < limit:
+                break
+
+        deduped: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            try:
+                timestamp = int(row["fundingTime"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if start_time <= timestamp <= end_time:
+                deduped[timestamp] = row
+        return [deduped[timestamp] for timestamp in sorted(deduped)]
+
     def get_basis(self, symbol: str, period: str = "5m", limit: int = 30) -> List[Dict[str, Any]]:
         return self._get_json(
             "/futures/data/basis",

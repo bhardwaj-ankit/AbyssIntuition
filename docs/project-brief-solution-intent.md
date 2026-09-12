@@ -242,7 +242,30 @@ with the finding that the *old engine's* directional precision is **0.393 vs a
 > covers one regime. This is the honest state, and the fail-closed gate
 > correctly refuses to deploy any of it.
 
-### 7.4 Path to "enough good data"
+### 7.4 V2 label and 180-day walk-forward result (2026-08-06)
+
+The corrected pipeline was rebuilt as `runtime/training_v6.db`: 25,896 hourly
+snapshots across six symbols and 129,480 resolved labels from 2026-02-06 through
+2026-08-05. Every label uses `triple-barrier-v2`; the first barrier outcome is
+separate from the actual horizon-close regression target. Vision positioning
+coverage spans the same period, and candle-derived order-book/trade-flow proxies
+are excluded from the production feature contract.
+
+Two complete, non-overlapping walk-forward tests were available using rolling
+90-day training, 15-day validation, and 15-day test windows:
+
+| Horizon | Mean directional precision | Mean sign hit | Mean range coverage | Gate |
+|---|---:|---:|---:|---|
+| 15m | 0.4024 | 0.5028 | 0.7340 | FAIL |
+| 60m | 0.2824 | 0.5050 | 0.6942 | FAIL |
+| 240m | 0.3719 | 0.4937 | 0.6679 | FAIL |
+
+This removes both label-target corruption and missing historical positioning as
+explanations for the weak result. The remaining feature set still has no stable
+directional edge. The next phase must add genuinely new information rather than
+only more rows of candle-derived proxies.
+
+### 7.5 Path to "enough good data"
 
 1. **Backfill positioning from Binance Vision** (done): OI/taker/long-short
    ratios for the full history via `ingest-vision-metrics`, joined with
@@ -252,10 +275,11 @@ with the finding that the *old engine's* directional precision is **0.393 vs a
    toward 6–12 months, then re-check the gate walk-forward.
 3. **Fix OI at capture** (done for go-forward: `_open_interest_change_pct` is now
    multi-window / noise-robust).
-4. **Add the highest-value missing signal**: liquidation-cluster distances (the
-   map currently keeps only a scalar confidence, discarding cluster levels) —
-   integrate Coinglass per [DATA_INGESTION.md](../DATA_INGESTION.md). Then
-   multi-window CVD and funding × time-to-settlement.
+4. **Add the highest-value missing signal**: observed liquidation flow. The
+   free Binance and Bybit public WebSocket collector now stores this forward;
+   no paid provider is part of the active plan. Once sufficient per-symbol
+   history has accumulated, measure incremental lift with the same walk-forward
+   folds. See [DATA_INGESTION.md](../DATA_INGESTION.md).
 5. **Re-evaluate walk-forward** across ≥2 non-overlapping windows before trusting
    any gate pass.
 

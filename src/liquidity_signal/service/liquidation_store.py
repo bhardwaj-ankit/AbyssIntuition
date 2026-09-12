@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import sqlite3
 import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,7 @@ from liquidity_signal.models import (
     BotBacktestResponse,
     BotTrade,
     LiquidationEventPoint,
+    LiquidationStreamHealth,
     PaperBotStatus,
     TrainingDatasetSummary,
     TrainingSnapshotLabel,
@@ -66,6 +69,47 @@ class LiquidationStore:
                     raw_json TEXT NOT NULL,
                     PRIMARY KEY(source, exchange_event_id)
                 );
+
+                CREATE INDEX IF NOT EXISTS idx_liquidation_events_symbol_time
+                ON liquidation_events(symbol, event_ts);
+
+                CREATE TABLE IF NOT EXISTS liquidation_capture_heartbeats (
+                    source TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    bucket_ts INTEGER NOT NULL,
+                    connected INTEGER NOT NULL,
+                    events_buffered INTEGER NOT NULL,
+                    reconnects INTEGER NOT NULL,
+                    last_error TEXT,
+                    PRIMARY KEY(source, symbol, bucket_ts)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_liquidation_heartbeats_symbol_time
+                ON liquidation_capture_heartbeats(symbol, bucket_ts);
+
+                CREATE TABLE IF NOT EXISTS liquidation_capture_incidents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source TEXT NOT NULL,
+                    symbol TEXT,
+                    start_ts INTEGER NOT NULL,
+                    end_ts INTEGER NOT NULL,
+                    invalidated_rows INTEGER NOT NULL,
+                    reason TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS liquidation_archive_ingest (
+                    source TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    period TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    rows_stored INTEGER NOT NULL,
+                    source_paths_json TEXT NOT NULL,
+                    PRIMARY KEY(source, symbol, period)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_liquidation_archive_symbol_period
+                ON liquidation_archive_ingest(source, symbol, period);
 
                 CREATE TABLE IF NOT EXISTS liquidation_snapshots (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -245,6 +289,14 @@ class LiquidationStore:
                     resolved_at INTEGER,
                     upper_barrier_price REAL NOT NULL,
                     lower_barrier_price REAL NOT NULL,
+                    barrier_first_hit TEXT,
+                    barrier_hit_ts INTEGER,
+                    barrier_hit_price REAL,
+                    barrier_ambiguous INTEGER NOT NULL DEFAULT 0,
+                    horizon_close_price REAL,
+                    horizon_return_bps REAL,
+                    max_favorable_excursion_pct REAL,
+                    max_adverse_excursion_pct REAL,
                     terminal_price REAL,
                     max_up_pct REAL NOT NULL DEFAULT 0.0,
                     max_down_pct REAL NOT NULL DEFAULT 0.0,
@@ -256,6 +308,36 @@ class LiquidationStore:
                 ON training_labels(symbol, status, expires_at ASC);
                 """
             )
+            incident_columns = {
+                row[1]
+                for row in self._conn.execute(
+                    "PRAGMA table_info(liquidation_capture_incidents)"
+                ).fetchall()
+            }
+            if "symbol" not in incident_columns:
+                self._conn.execute(
+                    "ALTER TABLE liquidation_capture_incidents ADD COLUMN symbol TEXT"
+                )
+            # Additive migration for stores created before label schema v2.
+            existing = {
+                row[1]
+                for row in self._conn.execute("PRAGMA table_info(training_labels)").fetchall()
+            }
+            migrations = {
+                "barrier_first_hit": "TEXT",
+                "barrier_hit_ts": "INTEGER",
+                "barrier_hit_price": "REAL",
+                "barrier_ambiguous": "INTEGER NOT NULL DEFAULT 0",
+                "horizon_close_price": "REAL",
+                "horizon_return_bps": "REAL",
+                "max_favorable_excursion_pct": "REAL",
+                "max_adverse_excursion_pct": "REAL",
+            }
+            for name, definition in migrations.items():
+                if name not in existing:
+                    self._conn.execute(
+                        f"ALTER TABLE training_labels ADD COLUMN {name} {definition}"
+                    )
 
     def persist_events(self, events: list[LiquidationEventPoint]) -> None:
         if not events:
@@ -288,6 +370,57 @@ class LiquidationStore:
                 rows,
             )
 
+    def record_archive_period(
+        self,
+        source: str,
+        symbol: str,
+        period: str,
+        status: str,
+        rows_stored: int,
+        source_paths: list[str],
+    ) -> None:
+        """Record archive provenance even when a published day has zero events."""
+        if status not in {"complete", "unavailable", "failed"}:
+            raise ValueError("Unsupported liquidation archive status.")
+        with self._lock, self._conn:
+            self._conn.execute(
+                """INSERT OR REPLACE INTO liquidation_archive_ingest
+                   (source, symbol, period, status, rows_stored, source_paths_json)
+                   VALUES(?,?,?,?,?,?)""",
+                (
+                    source,
+                    symbol.upper(),
+                    period,
+                    status,
+                    rows_stored,
+                    json.dumps(source_paths),
+                ),
+            )
+
+    def archive_coverage(
+        self, source: str, symbol: str, start_day: str, end_day: str
+    ) -> dict[str, Any]:
+        with self._lock:
+            row = self._conn.execute(
+                """SELECT COUNT(*),
+                          SUM(status='complete'),
+                          SUM(status='unavailable'),
+                          SUM(CASE WHEN status='complete' THEN rows_stored ELSE 0 END),
+                          MIN(CASE WHEN status='complete' THEN period END),
+                          MAX(CASE WHEN status='complete' THEN period END)
+                   FROM liquidation_archive_ingest
+                   WHERE source=? AND symbol=? AND period BETWEEN ? AND ?""",
+                (source, symbol.upper(), start_day, end_day),
+            ).fetchone()
+        return {
+            "audited_days": int(row[0] or 0),
+            "published_days": int(row[1] or 0),
+            "unavailable_days": int(row[2] or 0),
+            "rows": int(row[3] or 0),
+            "first_published_day": row[4],
+            "last_published_day": row[5],
+        }
+
     def load_recent_events(self, symbol: str, limit: int = 200) -> list[LiquidationEventPoint]:
         with self._lock:
             rows = self._conn.execute(
@@ -311,6 +444,337 @@ class LiquidationStore:
                 (symbol.upper(), since_ms),
             ).fetchone()
         return int(row["count"]) if row else 0
+
+    def persist_stream_health(
+        self, rows: list[LiquidationStreamHealth], observed_at_ms: int
+    ) -> None:
+        """Persist five-minute collector heartbeats for auditable coverage."""
+        bucket_ts = (observed_at_ms // 300_000) * 300_000
+        values = [
+            (
+                row.source,
+                row.symbol.upper(),
+                bucket_ts,
+                int(row.connected),
+                row.events_buffered,
+                row.reconnects,
+                row.last_error,
+            )
+            for row in rows
+        ]
+        if not values:
+            return
+        with self._lock, self._conn:
+            self._conn.executemany(
+                """INSERT OR REPLACE INTO liquidation_capture_heartbeats
+                   (source, symbol, bucket_ts, connected, events_buffered,
+                    reconnects, last_error) VALUES(?,?,?,?,?,?,?)""",
+                values,
+            )
+
+    def invalidate_capture_interval(
+        self,
+        source: str,
+        start_ts: int,
+        end_ts: int,
+        reason: str,
+        symbol: str | None = None,
+    ) -> dict[str, Any]:
+        """Fail closed on heartbeats later proven not to represent a live feed."""
+        normalized_source = source.strip().lower()
+        if not normalized_source:
+            raise ValueError("source is required")
+        if end_ts < start_ts:
+            raise ValueError("end_ts must be on or after start_ts")
+        if not reason.strip():
+            raise ValueError("reason is required")
+        normalized_symbol = symbol.strip().upper() if symbol else None
+        with self._lock, self._conn:
+            if normalized_symbol:
+                cursor = self._conn.execute(
+                    """UPDATE liquidation_capture_heartbeats
+                       SET connected=0, last_error=?
+                       WHERE source=? AND symbol=? AND bucket_ts BETWEEN ? AND ?""",
+                    (
+                        reason.strip(),
+                        normalized_source,
+                        normalized_symbol,
+                        int(start_ts),
+                        int(end_ts),
+                    ),
+                )
+            else:
+                cursor = self._conn.execute(
+                    """UPDATE liquidation_capture_heartbeats
+                       SET connected=0, last_error=?
+                       WHERE source=? AND bucket_ts BETWEEN ? AND ?""",
+                    (reason.strip(), normalized_source, int(start_ts), int(end_ts)),
+                )
+            invalidated = max(0, int(cursor.rowcount))
+            self._conn.execute(
+                """INSERT INTO liquidation_capture_incidents
+                   (source, symbol, start_ts, end_ts, invalidated_rows, reason,
+                    recorded_at) VALUES(?,?,?,?,?,?,?)""",
+                (
+                    normalized_source,
+                    normalized_symbol,
+                    int(start_ts),
+                    int(end_ts),
+                    invalidated,
+                    reason.strip(),
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+        return {
+            "source": normalized_source,
+            "symbol": normalized_symbol,
+            "start_ts": int(start_ts),
+            "end_ts": int(end_ts),
+            "invalidated_rows": invalidated,
+            "reason": reason.strip(),
+        }
+
+    def liquidation_flow_features(
+        self,
+        symbol: str,
+        event_ts: int,
+        mark_price: float,
+        windows_minutes: tuple[int, ...] = (5, 30, 60),
+    ) -> dict[str, float]:
+        """Aggregate only events observed at or before a model decision."""
+        if not windows_minutes or mark_price <= 0:
+            return {}
+        max_window = max(windows_minutes)
+        with self._lock:
+            rows = self._conn.execute(
+                """SELECT source, liquidated_side, price, notional, event_ts
+                   FROM liquidation_events
+                   WHERE symbol=? AND event_ts>? AND event_ts<=?
+                   ORDER BY event_ts DESC""",
+                (symbol.upper(), event_ts - max_window * 60_000, event_ts),
+            ).fetchall()
+            event_day = datetime.fromtimestamp(event_ts / 1000, timezone.utc).date().isoformat()
+            archive_row = self._conn.execute(
+                """SELECT 1 FROM liquidation_archive_ingest
+                   WHERE source='hyperliquid_archive' AND symbol=? AND period=?
+                         AND status='complete' LIMIT 1""",
+                (symbol.upper(), event_day),
+            ).fetchone()
+        archive_available = bool(archive_row)
+
+        features: dict[str, float] = {
+            "xliq.hyperliquid_archive_available": float(archive_available)
+        }
+        for minutes in windows_minutes:
+            cutoff = event_ts - minutes * 60_000
+            selected = [row for row in rows if int(row["event_ts"]) > cutoff]
+            with self._lock:
+                connected_buckets = self._conn.execute(
+                    """SELECT COUNT(*) FROM (
+                           SELECT bucket_ts
+                           FROM liquidation_capture_heartbeats
+                           WHERE symbol=? AND bucket_ts>? AND bucket_ts<=? AND connected=1
+                           GROUP BY bucket_ts
+                           HAVING COUNT(DISTINCT source) >= 2
+                       )""",
+                    (symbol.upper(), cutoff, event_ts),
+                ).fetchone()[0]
+            expected_buckets = max(1, minutes // 5)
+            capture_coverage = min(1.0, connected_buckets / expected_buckets)
+            long_notional = sum(
+                float(row["notional"])
+                for row in selected
+                if row["liquidated_side"] == "LONG"
+            )
+            short_notional = sum(
+                float(row["notional"])
+                for row in selected
+                if row["liquidated_side"] == "SHORT"
+            )
+            total = long_notional + short_notional
+            prefix = f"liqflow.{minutes}m"
+            coverage_known = archive_available or capture_coverage >= 0.95 or bool(selected)
+            features[f"{prefix}.capture_coverage"] = capture_coverage
+            features[f"{prefix}.coverage_known"] = float(coverage_known)
+            features[f"{prefix}.event_count_log"] = (
+                math.log1p(len(selected)) if coverage_known else math.nan
+            )
+            features[f"{prefix}.notional_log"] = (
+                math.log1p(total) if coverage_known else math.nan
+            )
+            features[f"{prefix}.notional_imbalance"] = (
+                (long_notional - short_notional) / total
+                if total > 0
+                else (0.0 if coverage_known else math.nan)
+            )
+            features[f"{prefix}.source_count"] = float(
+                len({str(row["source"]) for row in selected})
+            )
+
+            archive_selected = [
+                row for row in selected if row["source"] == "hyperliquid_archive"
+            ]
+            archive_long = sum(
+                float(row["notional"])
+                for row in archive_selected
+                if row["liquidated_side"] == "LONG"
+            )
+            archive_short = sum(
+                float(row["notional"])
+                for row in archive_selected
+                if row["liquidated_side"] == "SHORT"
+            )
+            archive_total = archive_long + archive_short
+            archive_prefix = f"xliq.hyperliquid.{minutes}m"
+            features[f"{archive_prefix}.event_count_log"] = (
+                math.log1p(len(archive_selected)) if archive_available else math.nan
+            )
+            features[f"{archive_prefix}.notional_log"] = (
+                math.log1p(archive_total) if archive_available else math.nan
+            )
+            features[f"{archive_prefix}.notional_imbalance"] = (
+                (archive_long - archive_short) / archive_total
+                if archive_total > 0
+                else (0.0 if archive_available else math.nan)
+            )
+            for side in ("LONG", "SHORT"):
+                distances = [
+                    ((float(row["price"]) - mark_price) / mark_price) * 10_000
+                    for row in selected
+                    if row["liquidated_side"] == side
+                ]
+                if distances:
+                    features[f"{prefix}.nearest_{side.lower()}_distance_bps"] = min(
+                        distances, key=abs
+                    )
+        return features
+
+    def hyperliquid_archive_flow_features(
+        self,
+        symbol: str,
+        event_ts: int,
+        mark_price: float,
+        windows_minutes: tuple[int, ...] = (5, 30, 60),
+    ) -> dict[str, float]:
+        """Return source-isolated archive features with explicit missingness."""
+        features = self.liquidation_flow_features(
+            symbol,
+            event_ts,
+            mark_price,
+            windows_minutes=windows_minutes,
+        )
+        return {
+            name: value
+            for name, value in features.items()
+            if name.startswith("xliq.hyperliquid")
+        }
+
+    def cryptohft_archive_flow_features(
+        self,
+        symbol: str,
+        event_ts: int,
+        mark_price: float,
+        windows_minutes: tuple[int, ...] = (5, 30, 60),
+    ) -> dict[str, float]:
+        """Return source-isolated CryptoHFT CEX features with explicit coverage.
+
+        Archive provenance, rather than live collector heartbeats, distinguishes a
+        genuinely quiet period from a missing download. Events are still clipped at
+        ``event_ts`` so a historical feature never sees a future liquidation.
+        """
+        if not windows_minutes or mark_price <= 0:
+            return {}
+        max_window = max(windows_minutes)
+        earliest_ts = event_ts - max_window * 60_000
+
+        def hour_periods(cutoff: int) -> list[str]:
+            first_hour = ((cutoff + 1) // 3_600_000) * 3_600_000
+            last_hour = (event_ts // 3_600_000) * 3_600_000
+            periods = []
+            current = first_hour
+            while current <= last_hour:
+                periods.append(
+                    datetime.fromtimestamp(current / 1000, timezone.utc).strftime(
+                        "%Y-%m-%dT%H:00:00Z"
+                    )
+                )
+                current += 3_600_000
+            return periods
+
+        all_periods = hour_periods(earliest_ts)
+        placeholders = ",".join("?" for _ in all_periods)
+        with self._lock:
+            rows = self._conn.execute(
+                """SELECT source, liquidated_side, price, notional, event_ts
+                   FROM liquidation_events
+                   WHERE symbol=? AND source IN ('binance','bybit')
+                         AND event_ts>? AND event_ts<=?
+                   ORDER BY event_ts DESC""",
+                (symbol.upper(), earliest_ts, event_ts),
+            ).fetchall()
+            provenance = self._conn.execute(
+                f"""SELECT source, period FROM liquidation_archive_ingest
+                    WHERE symbol=? AND status='complete'
+                          AND source IN (
+                              'cryptohft_recovery_binance',
+                              'cryptohft_recovery_bybit'
+                          ) AND period IN ({placeholders})""",
+                (symbol.upper(), *all_periods),
+            ).fetchall()
+        available = {(str(row["source"]), str(row["period"])) for row in provenance}
+        expected_sources = (
+            "cryptohft_recovery_binance",
+            "cryptohft_recovery_bybit",
+        )
+        features: dict[str, float] = {}
+        for minutes in windows_minutes:
+            cutoff = event_ts - minutes * 60_000
+            required_periods = hour_periods(cutoff)
+            complete = bool(required_periods) and all(
+                (source, period) in available
+                for source in expected_sources
+                for period in required_periods
+            )
+            selected = [row for row in rows if int(row["event_ts"]) > cutoff]
+            long_notional = sum(
+                float(row["notional"])
+                for row in selected
+                if row["liquidated_side"] == "LONG"
+            )
+            short_notional = sum(
+                float(row["notional"])
+                for row in selected
+                if row["liquidated_side"] == "SHORT"
+            )
+            total = long_notional + short_notional
+            prefix = f"xliq.cryptohft.{minutes}m"
+            features[f"{prefix}.archive_complete"] = float(complete)
+            features[f"{prefix}.event_count_log"] = (
+                math.log1p(len(selected)) if complete else math.nan
+            )
+            features[f"{prefix}.notional_log"] = (
+                math.log1p(total) if complete else math.nan
+            )
+            features[f"{prefix}.notional_imbalance"] = (
+                (long_notional - short_notional) / total
+                if total > 0
+                else (0.0 if complete else math.nan)
+            )
+            features[f"{prefix}.source_count"] = (
+                float(len({str(row["source"]) for row in selected}))
+                if complete
+                else math.nan
+            )
+            for side in ("LONG", "SHORT"):
+                distances = [
+                    ((float(row["price"]) - mark_price) / mark_price) * 10_000
+                    for row in selected
+                    if row["liquidated_side"] == side
+                ]
+                features[f"{prefix}.nearest_{side.lower()}_distance_bps"] = (
+                    min(distances, key=abs) if complete and distances else math.nan
+                )
+        return features
 
     def persist_snapshot(self, symbol: str, generated_at: int, source: str, range_pct: float, resolution: int, payload: dict[str, Any]) -> None:
         with self._lock, self._conn:
@@ -724,9 +1188,11 @@ class LiquidationStore:
                 """
                 INSERT OR REPLACE INTO training_labels (
                     snapshot_id, symbol, event_ts, horizon_minutes, status, label_action, expires_at,
-                    resolved_at, upper_barrier_price, lower_barrier_price, terminal_price,
-                    max_up_pct, max_down_pct, raw_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    resolved_at, upper_barrier_price, lower_barrier_price, barrier_first_hit,
+                    barrier_hit_ts, barrier_hit_price, barrier_ambiguous, horizon_close_price,
+                    horizon_return_bps, max_favorable_excursion_pct, max_adverse_excursion_pct,
+                    terminal_price, max_up_pct, max_down_pct, raw_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     label.snapshot_id,
@@ -739,6 +1205,14 @@ class LiquidationStore:
                     label.resolved_at,
                     label.upper_barrier_price,
                     label.lower_barrier_price,
+                    label.barrier_first_hit.value if label.barrier_first_hit else None,
+                    label.barrier_hit_ts,
+                    label.barrier_hit_price,
+                    1 if label.barrier_ambiguous else 0,
+                    label.horizon_close_price,
+                    label.horizon_return_bps,
+                    label.max_favorable_excursion_pct,
+                    label.max_adverse_excursion_pct,
                     label.terminal_price,
                     label.max_up_pct,
                     label.max_down_pct,
