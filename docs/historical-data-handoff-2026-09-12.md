@@ -38,21 +38,63 @@ leakage-safe walk-forward gates before promotion.
   liquidation-event ground truth. Shared reference:
   https://chatgpt.com/share/6aa5bc07-b714-83eb-81e8-e7c1b4d3f6b0
 
-## Full-history jobs started on the original machine
+## Final original-workstation cutover state
 
 The original full CryptoHFTData request covers the half-open range
 `[2025-06-28T00:00:00Z, 2026-09-12T20:00:00Z)` and contains 127,248 partitions.
-At the 2026-09-12 21:16 UTC checkpoint it had processed 600 partitions, stored
-20,758 events, and recorded zero failures. The public rate limit makes the full
-run approximately 35 hours.
+The user requested a clean handoff to another laptop, so every related process
+was stopped at the 2026-09-12 21:48 UTC audit. The final resumable checkpoint
+is:
 
-Other active/queued work at handoff:
+- 2,325 processed partitions;
+- 76,087 stored liquidation events;
+- 452 published zero-event partitions;
+- zero failed partitions;
+- 7,359 cached source files totalling 25,723,818 bytes;
+- last report update `2026-09-12T21:44:23.296520+00:00`.
 
-- extend `training_v6.db` from 179.83 effective days to the June 2025 boundary;
-- extend Binance positioning, depth, funding, and observed taker flow;
-- extend open on-chain daily context (the requested extension completed);
-- run the supplemental Binance job after positioning to avoid SQLite writer
-  contention.
+`cryptohft_full_history_status.json` still says `running` because the importer
+was deliberately terminated between checkpoints. This is expected and is not
+a database-integrity failure. The laptop should rerun the same idempotent task;
+cached files and archive provenance prevent completed work from being lost.
+
+The historical snapshot worker completed before shutdown. `training_v6.db`
+contains 10,604 hourly snapshots and 53,020 resolved labels for each of the six
+symbols: 63,624 snapshots and 318,120 resolved labels total. Its timestamp span
+is 2025-06-27 22:01 UTC through 2026-09-12 17:01 UTC. The requested on-chain
+extension also completed. The supplemental market worker was stopped during
+its final run and should be rerun on the laptop; completed archive records and
+caches make that operation resumable.
+
+Post-stop SQLite verification returned `ok` for:
+
+- `runtime/liquidation_history.db`;
+- `runtime/vision_metrics.db`;
+- `runtime/training_v6.db`;
+- `runtime/onchain_data.db`.
+
+The following exact process tree was stopped during the handoff:
+
+- CryptoHFT Python importer PID 25744;
+- supplemental PowerShell wrapper PID 11628 and Python child PID 28160;
+- collector PowerShell wrapper PID 4680, CLI shim PID 23144, and Python child
+  PID 9400.
+
+The historical training PowerShell wrapper PID 18024 had already exited after
+finishing all six symbols.
+
+To prevent any restart on the original workstation, these task definitions were
+removed from Windows Task Scheduler:
+
+- `AbyssIntuition-LiquidationCollector`;
+- `AbyssIntuition-DailyDataRefresh`;
+- `AbyssIntuition-DataHealthWatchdog`.
+
+A full restart-persistence audit found no remaining matching process, scheduled
+task, Windows service, Startup-folder entry, Run-registry entry, or Docker
+installation. Therefore this workstation will not collect after reboot. Live
+liquidation collection remains offline until the destination laptop starts its
+collector, and that interval must be treated as a real continuity gap.
 
 Local progress files and logs are deliberately not committed. On a transferred
 data root, inspect `cryptohft_full_history_status.json`,

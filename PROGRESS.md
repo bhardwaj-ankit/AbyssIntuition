@@ -9,6 +9,30 @@ to append a new entry after ingesting data or retraining.
 
 ---
 
+## 2026-09-12 - original workstation collection fully stopped for laptop cutover
+
+- Stopped the active CryptoHFT importer, Binance supplemental worker, live
+  liquidation collector, and their PowerShell/executable child processes. The
+  historical training worker had already completed before shutdown.
+- Removed—not merely disabled—the three Windows Task Scheduler definitions:
+  `AbyssIntuition-LiquidationCollector`, `AbyssIntuition-DailyDataRefresh`, and
+  `AbyssIntuition-DataHealthWatchdog`. A restart-persistence audit found no
+  remaining matching process, service, Startup-folder item, Run-registry entry,
+  or Docker installation. This workstation will not resume collection after a
+  reboot.
+- The resumable CryptoHFT checkpoint contains 2,325 of 127,248 partitions,
+  76,087 events, 452 published zero-event partitions, and zero failures. Its
+  report intentionally remains `running` because the process was stopped; the
+  laptop must resume it from 7,359 cached files (25,723,818 bytes).
+- The expanded historical snapshot job completed all six symbols: 10,604
+  hourly snapshots and 53,020 resolved labels per symbol, or 63,624 snapshots
+  and 318,120 resolved labels in total, spanning 2025-06-27 22:01 UTC through
+  2026-09-12 17:01 UTC.
+- `liquidation_history.db`, `vision_metrics.db`, `training_v6.db`, and
+  `onchain_data.db` all passed SQLite `quick_check` after shutdown. Live
+  liquidation capture is now offline until the dedicated laptop assumes
+  ownership.
+
 ## 2026-09-12 - full historical liquidation and training expansion started
 
 - Started a resumable CryptoHFTData import for every available hourly Binance

@@ -4,6 +4,20 @@ This is the canonical script order for moving AbyssIntuition data collection to
 a dedicated Windows machine. It covers the one-time historical backfill and the
 continuous jobs required afterward.
 
+## Current ownership state
+
+As of the 2026-09-12 21:48 UTC cutover audit, the original workstation has no
+running AbyssIntuition data process and no remaining scheduled task, service,
+Startup entry, Run-registry entry, or Docker deployment. Its three scheduled
+tasks were unregistered. It will not resume collection after reboot.
+
+The destination laptop has not yet assumed ownership, so live liquidation
+capture is currently offline. The transferred CryptoHFT job must resume from
+2,325/127,248 partitions and 7,359 cached files. Historical hourly snapshot
+generation is already complete for all six symbols. See
+`historical-data-handoff-2026-09-12.md` for exact counts, stopped PIDs, database
+checks, and incident history.
+
 ## What must run
 
 | Job | Script | Frequency | Purpose |

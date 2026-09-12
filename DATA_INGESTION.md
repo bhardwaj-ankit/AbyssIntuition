@@ -5,6 +5,14 @@ Velo, or any paid API key. Data readiness is measured by
 `runtime/data_completeness.json`, and normal GBDT training fails closed while a
 required signal family is incomplete.
 
+> **Collector ownership notice (2026-09-12 21:48 UTC):** collection was fully
+> stopped on the original workstation for transfer to a dedicated laptop. All
+> three AbyssIntuition scheduled tasks were unregistered, and the restart audit
+> found no remaining process or auto-start mechanism. Live liquidation capture
+> is offline until the laptop starts its collector. The CryptoHFT backfill must
+> resume from 2,325/127,248 partitions; see
+> [the handoff](docs/historical-data-handoff-2026-09-12.md).
+
 The current model is data-bound: corrected labels and 180 days of positioning
 data did not produce a stable walk-forward edge. This phase therefore adds
 archived depth, funding, observed taker flow, and daily on-chain context while

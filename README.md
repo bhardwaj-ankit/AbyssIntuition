@@ -336,6 +336,11 @@ Detailed internet-facing setup is documented in [deploy/INTERNET_SETUP.md](/User
 
 ## Documentation
 
+> Data-collection ownership is currently transferring to the dedicated laptop.
+> The original workstation collector and all restart hooks were removed at the
+> 2026-09-12 21:48 UTC cutover. Follow the runbook below before assuming live
+> collection is active.
+
 - [DATA_INGESTION.md](DATA_INGESTION.md) — external data platforms (integrated / to-integrate, free/paid) and refresh jobs
 - [PROGRESS.md](PROGRESS.md) — dated progress log for the ML re-architecture effort
 - [deploy/linux/ALWAYS_ON_DATA_COLLECTION.md](deploy/linux/ALWAYS_ON_DATA_COLLECTION.md) — always-on capture for live-only liquidation data
