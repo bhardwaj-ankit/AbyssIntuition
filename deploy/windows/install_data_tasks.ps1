@@ -1,5 +1,6 @@
 param(
     [string]$DailyRefreshTime = "04:30",
+    [string]$DataRoot = "",
     [switch]$StartCollector
 )
 
@@ -14,11 +15,13 @@ $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 $collectorArguments = (
     "-NoProfile -ExecutionPolicy Bypass -File `"$collectorScript`" " +
-    "-CliPath `"$cliPath`""
+    "-CliPath `"$cliPath`" " +
+    "-DataRoot `"$DataRoot`""
 )
 $refreshArguments = (
     "-NoProfile -ExecutionPolicy Bypass -File `"$refreshScript`" " +
-    "-CliPath `"$cliPath`""
+    "-CliPath `"$cliPath`" " +
+    "-DataRoot `"$DataRoot`""
 )
 $collectorAction = New-ScheduledTaskAction `
     -Execute $powerShellPath `
@@ -64,6 +67,7 @@ Register-ScheduledTask `
 
 & (Join-Path $PSScriptRoot "install_health_watchdog_task.ps1") `
     -CliPath $cliPath `
+    -DataRoot $DataRoot `
     -IntervalMinutes 15
 
 if ($StartCollector) {
@@ -74,3 +78,4 @@ Write-Output "Installed AbyssIntuition-LiquidationCollector at logon."
 Write-Output "Installed AbyssIntuition-DailyDataRefresh daily at $DailyRefreshTime local time."
 Write-Output "Installed AbyssIntuition-DataHealthWatchdog every 15 minutes."
 Write-Output "CLI: $cliPath"
+Write-Output "Data root: $(if ($DataRoot) { $DataRoot } else { Join-Path $repoRoot 'runtime' })"

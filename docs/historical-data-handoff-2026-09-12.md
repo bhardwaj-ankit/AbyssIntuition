@@ -4,6 +4,9 @@ This document preserves the operational context needed to continue the work on
 another machine. It is the durable project handoff; the ChatGPT conversation
 itself is not required to understand or resume the jobs.
 
+For the exact installation and script order, use
+[`data-collection-runbook.md`](data-collection-runbook.md).
+
 ## Objective
 
 Recover all available observed Binance Futures and Bybit liquidation events for

@@ -1,5 +1,6 @@
 param(
     [string]$CliPath = "",
+    [string]$DataRoot = "",
     [int]$IntervalMinutes = 15
 )
 
@@ -16,7 +17,8 @@ $powerShellPath = (Get-Command powershell.exe -ErrorAction Stop).Source
 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $arguments = (
     "-NoProfile -ExecutionPolicy Bypass -File `"$watchdogScript`" " +
-    "-CliPath `"$CliPath`""
+    "-CliPath `"$CliPath`" " +
+    "-DataRoot `"$DataRoot`""
 )
 $action = New-ScheduledTaskAction `
     -Execute $powerShellPath `

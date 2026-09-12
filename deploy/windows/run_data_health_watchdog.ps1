@@ -1,11 +1,16 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$CliPath
+    [string]$CliPath,
+    [string]$DataRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$runtimeDirectory = Join-Path $repoRoot "runtime"
+$runtimeDirectory = if ($DataRoot) {
+    [System.IO.Path]::GetFullPath($DataRoot)
+} else {
+    Join-Path $repoRoot "runtime"
+}
 $logDirectory = Join-Path $runtimeDirectory "logs"
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 $logPath = Join-Path $logDirectory "data_health_watchdog.log"
@@ -13,7 +18,16 @@ $healthPath = Join-Path $runtimeDirectory "data_operations_health.json"
 $auditPath = Join-Path $runtimeDirectory "watchdog_interventions.jsonl"
 Set-Location -LiteralPath $repoRoot
 
-& $CliPath data-operations-health --no-fail-on-unhealthy 2>&1 |
+$liquidationDb = Join-Path $runtimeDirectory "liquidation_history.db"
+$refreshPath = Join-Path $runtimeDirectory "daily_refresh_status.json"
+$backupPath = Join-Path $runtimeDirectory "data_backup_status.json"
+
+& $CliPath data-operations-health `
+    --liquidation-db $liquidationDb `
+    --refresh-report-path $refreshPath `
+    --backup-status-path $backupPath `
+    --output-path $healthPath `
+    --no-fail-on-unhealthy 2>&1 |
     Tee-Object -FilePath $logPath -Append
 $healthCommandExitCode = $LASTEXITCODE
 $action = "health_command_failed"

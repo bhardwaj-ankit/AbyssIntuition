@@ -1,14 +1,21 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$CliPath,
+    [string]$DataRoot = "",
     [bool]$PreventSystemSleep = $true
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$logDirectory = Join-Path $repoRoot "runtime\logs"
+$runtimeDirectory = if ($DataRoot) {
+    [System.IO.Path]::GetFullPath($DataRoot)
+} else {
+    Join-Path $repoRoot "runtime"
+}
+$logDirectory = Join-Path $runtimeDirectory "logs"
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
 $logPath = Join-Path $logDirectory "liquidation_collector.log"
+$liquidationDb = Join-Path $runtimeDirectory "liquidation_history.db"
 Set-Location -LiteralPath $repoRoot
 
 if ($PreventSystemSleep) {
@@ -44,7 +51,7 @@ public static class AbyssPowerState {
 $existingCollectors = Get-CimInstance Win32_Process | Where-Object {
     $_.Name -in @("liquidity-signal.exe", "python.exe") -and
     $_.CommandLine -like "*capture-liquidations*" -and
-    $_.CommandLine -like "*runtime/liquidation_history.db*"
+    $_.CommandLine -like "*$liquidationDb*"
 }
 if ($existingCollectors) {
     $existingPids = @($existingCollectors | Select-Object -ExpandProperty ProcessId)
@@ -60,7 +67,7 @@ try {
             Tee-Object -FilePath $logPath -Append
         & $CliPath capture-liquidations `
             --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT" `
-            --db-path "runtime/liquidation_history.db" `
+            --db-path $liquidationDb `
             --status-interval-seconds 30 2>&1 |
             Tee-Object -FilePath $logPath -Append
         $collectorExitCode = $LASTEXITCODE

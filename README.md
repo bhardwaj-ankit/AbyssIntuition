@@ -344,6 +344,7 @@ Detailed docs live in [docs/](docs/):
 - [project-brief-solution-intent.md](docs/project-brief-solution-intent.md) — re-architecture toward a fine-tuned signal + price model, with measured data-readiness findings
 - [local-lora-training.md](docs/local-lora-training.md) — local LoRA training workflow
 - [historical-data-handoff-2026-09-12.md](docs/historical-data-handoff-2026-09-12.md) — recovery context, portable-SSD transfer, and remote historical workers
+- [data-collection-runbook.md](docs/data-collection-runbook.md) — exact Windows script order for historical, continuous, SSD-backed data collection
 - [MARKET_BEHAVIOR_FEATURE.md](docs/MARKET_BEHAVIOR_FEATURE.md) / [IMPLEMENTATION_SUMMARY.md](docs/IMPLEMENTATION_SUMMARY.md) — market-behavior feature
 - [liquidation-api-white-paper.md](docs/liquidation-api-white-paper.md) / [liquidation-api-trade-signal-guide.md](docs/liquidation-api-trade-signal-guide.md) — liquidation API
 - [trading-signal-research-api.md](docs/trading-signal-research-api.md) / [deep-research-report.md](docs/deep-research-report.md) — research notes
