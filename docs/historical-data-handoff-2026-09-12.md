@@ -4,6 +4,10 @@ This document preserves the operational context needed to continue the work on
 another machine. It is the durable project handoff; the ChatGPT conversation
 itself is not required to understand or resume the jobs.
 
+New laptop sessions must start with
+[`NEW_LAPTOP_BOOTSTRAP.md`](NEW_LAPTOP_BOOTSTRAP.md), which consolidates the
+complete verified state and the no-assumption execution contract.
+
 For the exact installation and script order, use
 [`data-collection-runbook.md`](data-collection-runbook.md).
 

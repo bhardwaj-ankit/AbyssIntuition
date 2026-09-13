@@ -4,6 +4,11 @@ This is the canonical script order for moving AbyssIntuition data collection to
 a dedicated Windows machine. It covers the one-time historical backfill and the
 continuous jobs required afterward.
 
+For a new Codex session on the destination laptop, begin with
+[`NEW_LAPTOP_BOOTSTRAP.md`](NEW_LAPTOP_BOOTSTRAP.md). It contains the complete
+verified state, no-assumption preflight contract, model context, and this
+runbook's required execution order.
+
 ## Current ownership state
 
 As of the 2026-09-12 21:48 UTC cutover audit, the original workstation has no

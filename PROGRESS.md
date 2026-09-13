@@ -37,6 +37,10 @@ to append a new entry after ingesting data or retraining.
 - The attached SanDisk Extreme SSD is currently exFAT. It is suitable for this
   transfer copy, but an actively written SQLite data root should use NTFS (or
   the laptop's internal NTFS disk) for safer Windows locking and durability.
+- Added `docs/NEW_LAPTOP_BOOTSTRAP.md` as the single no-assumption entry point
+  for a fresh Codex session. It preserves the full recovery timeline, verified
+  hashes and checkpoints, model/data contract, safety constraints, execution
+  order, completion criteria, and an exact copy-paste bootstrap prompt.
 
 ## 2026-09-12 - original workstation collection fully stopped for laptop cutover
 

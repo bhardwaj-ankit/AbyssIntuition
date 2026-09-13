@@ -370,7 +370,7 @@ liquidity-signal walk-forward-gbdt \
 | Bybit OI, long/short ratio, funding | Complete at 100% of all 25,896 archive-training anchors |
 | Binance spot taker flow | Complete at 100% of all 25,896 archive-training anchors |
 | Bybit archived tick-trade flow | Complete at 100% of all 25,896 archive-training anchors |
-| Historical CEX liquidations | Incomplete; free live capture started, no honest free backfill |
+| Historical CEX liquidations | CryptoHFTData provides observed Binance/Bybit archives from 2025-06-28; the full import is resumable at the verified 2,325/127,248 checkpoint, and the exact workstation outage interval is already recovered |
 | Strict forward cohort | Initialized separately; waits for >=95% dual-feed continuity before adding samples |
 | Multi-regime span | Still accumulating toward 6-12 months |
 
