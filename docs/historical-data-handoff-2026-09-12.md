@@ -116,6 +116,42 @@ data root, inspect `cryptohft_full_history_status.json`,
 
 The implementation passed all 114 project tests and Ruff at handoff.
 
+## Completed portable SSD transfer
+
+The stopped runtime was transferred on 2026-09-13 to
+`D:\AbyssIntuitionData` on the attached `Extreme SSD`. The raw runtime copy has
+13,555 files totalling 10,147,851,429 bytes; source and destination counts and
+bytes match, and Robocopy reported zero failed files and zero mismatches. All
+six production database files are byte-for-byte SHA-256 matches with their C:
+sources and passed SQLite `quick_check`:
+
+- `liquidation_history.db`;
+- `training_v6.db`;
+- `training_forward.db`;
+- `vision_metrics.db`;
+- `onchain_data.db`;
+- `cross_venue.db`.
+
+The independently verified online-backup archive is
+`verified_backups/data-backup-20260913T082636Z.zip`, SHA-256
+`d48fc387a27a112bd88cca40cdcc017389a2f63e7402e53ab6e8ffee2cc467f2`.
+The verified repository bundle is `AbyssIntuition.bundle` and contains branch
+`feature/gbdt-dual-head-and-docs`. Its current branch tip and SHA-256 are in the
+full machine-readable record, `TRANSFER_MANIFEST.json`, on the SSD. The
+untracked workspace setting was preserved separately at
+`workspace_uncommitted/.claude/settings.json`.
+
+The raw SQLite files and their online-backup copies can have different hashes
+because SQLite's online backup API may rewrite page layout. This is expected:
+the raw C:-to-SSD copies match each other exactly, while the backup archive has
+its own verified hashes and successful `quick_check` results.
+
+The SSD is currently formatted as exFAT. Keep this copy for transfer and
+backup, but use NTFS for databases that workers will actively write. Either
+restore the verified backup onto the laptop's internal NTFS disk or, after
+separately safeguarding all existing SSD contents, reformat/repartition the
+SSD as NTFS. Do not run SQLite writers directly on this exFAT data root.
+
 ## Continue on another Windows machine
 
 1. Clone this branch and install the project:

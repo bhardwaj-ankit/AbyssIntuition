@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$DataRoot,
 
-    [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")),
+    [string]$RepoRoot = "",
     [string]$PythonExe = "python",
     [string]$HistoryStart = "2025-06-28",
     [string]$ArchiveEndExclusive = "",
@@ -14,6 +14,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $RepoRoot) {
+    $RepoRoot = Join-Path $PSScriptRoot "..\.."
+}
 $repo = (Resolve-Path -LiteralPath $RepoRoot).Path
 $data = [System.IO.Path]::GetFullPath($DataRoot)
 New-Item -ItemType Directory -Force -Path $data | Out-Null

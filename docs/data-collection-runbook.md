@@ -18,6 +18,12 @@ generation is already complete for all six symbols. See
 `historical-data-handoff-2026-09-12.md` for exact counts, stopped PIDs, database
 checks, and incident history.
 
+The 2026-09-13 transfer is complete at `D:\AbyssIntuitionData`: 13,555 raw
+runtime files (10,147,851,429 bytes), a verified six-database backup, all
+resumable caches, and a verified Git bundle. Read `TRANSFER_MANIFEST.json` on
+the SSD before restoring. The attached SSD is exFAT, so treat it as transfer
+media and place the active SQLite data root on NTFS.
+
 ## What must run
 
 | Job | Script | Frequency | Purpose |
@@ -79,6 +85,12 @@ This performs transactionally consistent SQLite online backups, verifies
 `quick_check` and SHA-256 hashes, copies resumable download caches, and creates
 `AbyssIntuition.bundle`. A final cache sync should be done after the original
 historical workers stop.
+
+The backup and historical launcher scripts resolve their repository root only
+after PowerShell has initialized `$PSScriptRoot`, which keeps the default path
+compatible with Windows PowerShell 5. The backup script also omits the optional
+`--artifacts` argument when no status artifacts exist; an empty argument must
+not be supplied manually.
 
 Before starting the destination collector:
 

@@ -9,6 +9,29 @@ to append a new entry after ingesting data or retraining.
 
 ---
 
+## 2026-09-13 - portable SSD transfer completed and verified
+
+- Copied the stopped workstation's complete `runtime` tree to
+  `D:\AbyssIntuitionData`: 13,555 files and 10,147,851,429 bytes. Robocopy
+  reported zero failed files and zero mismatches.
+- Verified all six production database copies against their C: source files by
+  SHA-256 and SQLite `quick_check`; every raw copy is an exact match and every
+  integrity check returned `ok`.
+- Created and independently verified
+  `verified_backups/data-backup-20260913T082636Z.zip` (SHA-256
+  `d48fc387a27a112bd88cca40cdcc017389a2f63e7402e53ab6e8ffee2cc467f2`)
+  and `AbyssIntuition.bundle`. The current bundle hash and branch tip are in
+  the SSD transfer manifest.
+- Preserved the only non-runtime untracked workspace setting at
+  `workspace_uncommitted/.claude/settings.json`. Transfer details and hashes
+  are in `D:\AbyssIntuitionData\TRANSFER_MANIFEST.json`.
+- Fixed the three Windows portable-handoff scripts so their repository-root
+  defaults work under Windows PowerShell 5, and fixed optional artifact
+  argument construction in the portable backup script.
+- The attached SanDisk Extreme SSD is currently exFAT. It is suitable for this
+  transfer copy, but an actively written SQLite data root should use NTFS (or
+  the laptop's internal NTFS disk) for safer Windows locking and durability.
+
 ## 2026-09-12 - original workstation collection fully stopped for laptop cutover
 
 - Stopped the active CryptoHFT importer, Binance supplemental worker, live

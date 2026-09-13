@@ -2,13 +2,16 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$PortableDataRoot,
 
-    [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")),
+    [string]$RepoRoot = "",
     [string]$PythonExe = "python",
     [switch]$IncludeCaches,
     [switch]$SkipRepositoryBundle
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $RepoRoot) {
+    $RepoRoot = Join-Path $PSScriptRoot "..\.."
+}
 $repo = (Resolve-Path -LiteralPath $RepoRoot).Path
 $destination = [System.IO.Path]::GetFullPath($PortableDataRoot)
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
@@ -29,13 +32,24 @@ $databases = @(
 ) | Where-Object { Test-Path -LiteralPath $_ }
 $backupDir = Join-Path $destination "backups"
 $statusPath = Join-Path $destination "data_backup_status.json"
+$artifacts = @(
+    "runtime/cryptohft_full_history_status.json",
+    "runtime/daily_refresh_status.json",
+    "runtime/data_completeness_forward.json",
+    "runtime/data_operations_health.json"
+) | Where-Object { Test-Path -LiteralPath $_ }
 
-& $python -m liquidity_signal.cli backup-data `
-    --databases ($databases -join ',') `
-    --artifacts "" `
-    --output-dir $backupDir `
-    --status-path $statusPath `
-    --retain 3
+$arguments = @(
+    "-m", "liquidity_signal.cli", "backup-data",
+    "--databases", ($databases -join ','),
+    "--output-dir", $backupDir,
+    "--status-path", $statusPath,
+    "--retain", "3"
+)
+if ($artifacts.Count -gt 0) {
+    $arguments += @("--artifacts", ($artifacts -join ','))
+}
+& $python @arguments
 if ($LASTEXITCODE -ne 0) {
     throw "Verified SQLite backup failed with exit code $LASTEXITCODE"
 }

@@ -2,12 +2,15 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$DataRoot,
 
-    [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")),
+    [string]$RepoRoot = "",
     [string]$PythonExe = "python",
     [string[]]$Tasks = @("cryptohft", "market", "training")
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $RepoRoot) {
+    $RepoRoot = Join-Path $PSScriptRoot "..\.."
+}
 $repo = (Resolve-Path -LiteralPath $RepoRoot).Path
 $data = [System.IO.Path]::GetFullPath($DataRoot)
 $logs = Join-Path $data "logs"
