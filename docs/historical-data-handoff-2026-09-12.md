@@ -132,6 +132,12 @@ sources and passed SQLite `quick_check`:
 - `onchain_data.db`;
 - `cross_venue.db`.
 
+A second, exhaustive SHA-256 audit hashed every one of the 13,555 runtime files
+on both drives. It found zero missing files, extra files, size mismatches, or
+hash mismatches. Generated SQLite databases are deliberately excluded from Git
+tracking and must travel through this verified data transfer; reusable LoRA
+exports and training configuration JSON files remain versioned in Git.
+
 The independently verified online-backup archive is
 `verified_backups/data-backup-20260913T082636Z.zip`, SHA-256
 `d48fc387a27a112bd88cca40cdcc017389a2f63e7402e53ab6e8ffee2cc467f2`.

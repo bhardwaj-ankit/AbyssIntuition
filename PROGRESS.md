@@ -13,7 +13,9 @@ to append a new entry after ingesting data or retraining.
 
 - Copied the stopped workstation's complete `runtime` tree to
   `D:\AbyssIntuitionData`: 13,555 files and 10,147,851,429 bytes. Robocopy
-  reported zero failed files and zero mismatches.
+  reported zero failed files and zero mismatches. A subsequent exhaustive
+  SHA-256 pass compared all 13,555 source/destination file pairs and found zero
+  missing files, extras, size differences, or content-hash differences.
 - Verified all six production database copies against their C: source files by
   SHA-256 and SQLite `quick_check`; every raw copy is an exact match and every
   integrity check returned `ok`.
@@ -28,6 +30,10 @@ to append a new entry after ingesting data or retraining.
 - Fixed the three Windows portable-handoff scripts so their repository-root
   defaults work under Windows PowerShell 5, and fixed optional artifact
   argument construction in the portable backup script.
+- Committed reusable LoRA exports and training configurations, while marking
+  SQLite databases and machine-specific `.claude/settings.json` as local data.
+  Database files remain intact on C: and in the verified SSD transfer rather
+  than being embedded in Git history.
 - The attached SanDisk Extreme SSD is currently exFAT. It is suitable for this
   transfer copy, but an actively written SQLite data root should use NTFS (or
   the laptop's internal NTFS disk) for safer Windows locking and durability.
