@@ -101,8 +101,10 @@ liquidation collection remains offline until the destination laptop starts its
 collector, and that interval must be treated as a real continuity gap.
 
 Local progress files and logs are deliberately not committed. On a transferred
-data root, inspect `cryptohft_full_history_status.json`,
-`historical_backfill_processes.json`, and the `logs` directory.
+data root, inspect `cryptohft_full_history_status.json`, the `logs` directory,
+and `historical_backfill_processes.json` when present. The last file is output
+from the destination launcher and is created fresh when the workers start; its
+absence from the stopped transfer is not a database-integrity failure.
 
 ## Model/data contract added
 

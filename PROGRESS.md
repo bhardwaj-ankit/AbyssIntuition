@@ -41,6 +41,12 @@ to append a new entry after ingesting data or retraining.
   for a fresh Codex session. It preserves the full recovery timeline, verified
   hashes and checkpoints, model/data contract, safety constraints, execution
   order, completion criteria, and an exact copy-paste bootstrap prompt.
+- Clarified the historical `market` worker contract after destination
+  preflight: it intentionally owns Binance Vision/supplemental and open
+  on-chain ingestion only. Bybit positioning/trades and Binance spot flow
+  remain in the separate `ingest-cross-venue` pipeline and `cross_venue.db`.
+  Also documented that the launcher process report is generated on start and
+  that a running Docker service must be checked for actual project containers.
 
 ## 2026-09-12 - original workstation collection fully stopped for laptop cutover
 

@@ -184,9 +184,24 @@ anchors need to be generated.
 
 ### Supplemental market job: unfinished and resumable
 
-The worker extending Binance/Bybit positioning, depth, funding, taker flow,
-and daily on-chain context was stopped during its final run. Resume one
-`market` worker. Existing rows and caches are designed for repeatable ingestion.
+The required `market` worker intentionally runs these three commands:
+
+- `ingest-vision-metrics` for Binance Vision OI and positioning;
+- `ingest-open-onchain` for daily open on-chain context;
+- `ingest-vision-supplemental` for Binance depth, funding, and taker flow.
+
+It does **not** run `ingest-cross-venue` and does not write `cross_venue.db`.
+Resume one `market` worker. Existing rows and caches are designed for
+repeatable ingestion.
+
+Cross-venue ingestion is a separate optional feature pipeline. The transferred
+`cross_venue.db` preserves Bybit trades/positioning/funding and Binance spot
+flow beginning 2026-02-06; it covered the recorded 180-day archive-training
+anchors. The daily refresh invokes the cross-venue pipeline for its rolling
+recovery window and extends it forward. Do not silently add cross-venue work to
+the historical `market` worker. If the user later requests cross-venue history
+before 2026-02-06, audit source availability and run `ingest-cross-venue` as a
+separate, explicitly reported task.
 
 ## SSD transfer inventory and proof
 
@@ -347,8 +362,17 @@ The agent must report all results before starting workers:
    virtual environment is installed.
 7. Inventory active AbyssIntuition processes and Windows scheduled tasks.
    Starting is forbidden if a duplicate destination worker/collector exists.
+   A running Docker service alone is not proof of a project workload: inspect
+   `docker ps --no-trunc` and `docker compose ps --all` before clearing this
+   check. If process command lines are inaccessible, obtain sufficient
+   read-only process visibility or report the check as unresolved.
 8. Confirm an NTFS destination path and available capacity. Do not select exFAT
    for the active SQLite data root.
+
+`historical_backfill_processes.json` is launcher output, not a required input
+artifact. Its absence from the SSD is expected when no active launcher record
+was preserved and is not a data-integrity conflict. The destination launcher
+creates a fresh file after it starts the two workers.
 
 ### Phase 2: environment preparation
 
