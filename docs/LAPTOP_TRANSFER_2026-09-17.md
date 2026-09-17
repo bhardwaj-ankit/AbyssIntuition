@@ -1,5 +1,27 @@
 # September 17 laptop transfer
 
+## Verified transfer result: September 18, 01:12 Dubai
+
+The frozen source and SSD payload match exactly: **135,374 files,
+20,111,080,896 bytes**, zero missing or extra files, zero size differences,
+and zero SHA-256 differences. All seven production databases passed fresh
+`quick_check` on both source and SSD. The independent retained ZIP verification
+also passed checksums and integrity for all seven restored databases.
+
+Full comparison completed at `2026-09-17T21:12:11.409651Z`.
+The `payload_files.json` SHA-256 is
+`1639f6fe91e4bcb6688980e47befc001eb728780e4704e00ca64a825bd670563`.
+Per-database hashes are in `database_verification.json`; the manifest records
+the final code commit and bundle hash. Use the package's `READ_FIRST.txt` and
+`VERIFY_TRANSFER.py` to verify the media and the new NTFS copy. The original SSD
+transfer and all source data remain preserved.
+
+This completes preparation of the portable transfer, not activation of the
+new laptop. Source collection is stopped and disabled. Destination ownership
+begins only after its own read-only preflight, environment/test checks, exact
+NTFS copy validation, and duplicate-worker checks pass. No new model was
+trained or promoted.
+
 ## Full collection ownership handoff authorized September 18
 
 The user explicitly chose to move collection to the new laptop. All five
