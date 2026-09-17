@@ -7,10 +7,14 @@ not guess.
 
 ## Copy-paste prompt for Codex on the new laptop
 
-**September 17 transfer preparation:** read
+**September 18 completed transfer and source shutdown:** read
 `docs/LAPTOP_TRANSFER_2026-09-17.md` before executing this document's older
 transfer commands. The new package uses a separate transfer directory and
 seven production databases. Its manifest must say `complete` before restore.
+The package was fully verified and finalized at commit `b09def1`. A final
+01:15 Dubai source inspection found no project scripts running and all five
+scheduled tasks Disabled. Later shutdown documentation is available on GitHub;
+the already-detached SSD bundle remains at its manifest's recorded commit.
 The user authorized full collection ownership transfer on September 18. Source
 tasks are disabled. Require the manifest to confirm `full_handoff` and completed
 verification before starting destination collectors.

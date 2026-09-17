@@ -9,6 +9,25 @@ to append a new entry after ingesting data or retraining.
 
 ---
 
+## 2026-09-18 - verified full transfer and source collection shutdown
+
+- User chose to move collection ownership to the next laptop. All five source
+  tasks were stopped and disabled at September 17 20:25:08 UTC. The final
+  September 18 01:15 Dubai inspection found no remaining collection, copy,
+  verification, or monitoring scripts; all five tasks were still Disabled.
+- The completed SSD package is `AbyssIntuitionTransfer-20260917`, with a nested
+  `AbyssIntuitionData` payload: 135,374 files, 20,111,080,896 bytes, exact full
+  SHA-256 comparison, zero discrepancies. All seven source and copied
+  production databases passed quick_check; the retained backup ZIP passed
+  independent restoration, checksums, and all seven integrity checks.
+- Package manifest is complete and records code commit `b09def1`. Source data
+  and the older SSD transfer were preserved. The SSD package was no longer
+  accessible at its former E: path during final close-out, so this later
+  documentation is on GitHub, not in its existing bundle.
+- Destination activation is still pending its own verified NTFS copy and
+  preflight. Do not re-enable the source tasks. No model was trained or
+  promoted. See `docs/LAPTOP_TRANSFER_2026-09-17.md` for cutoffs and proof.
+
 ## 2026-09-17 - live collection enabled and recent history recovered
 
 - User authorized live collection and catch-up through today for BTC, ETH,

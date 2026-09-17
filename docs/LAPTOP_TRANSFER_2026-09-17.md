@@ -1,5 +1,24 @@
 # September 17 laptop transfer
 
+## Final source shutdown check: September 18, 01:15 Dubai
+
+At the user's final close-out request, process inspection found no remaining
+project Python/CLI workers, transfer Robocopy process, verification script, or
+continuity monitor. Nothing remained to terminate. All five `AbyssIntuition-`
+scheduled tasks remained Disabled. The source data is preserved; do not
+restart collection on this laptop.
+
+The completed SSD package contains code commit
+`b09def195cd3a82dc950ae5bff413df617e386b1`. Its verified Git bundle SHA-256 is
+`569e0d5834167819dfb571ef2f4acb8802b18a4764808fb5b40b50f183536229`;
+the completed transfer manifest SHA-256 is
+`fd34e4ccc1e992ec4c7f161b1b6c7491006b6e098f7180b284b2eb64252ddde1`.
+The package was no longer accessible at its former `E:` path during this final
+check. This subsequent shutdown documentation is pushed to GitHub but is not
+in that already-completed bundle. A destination with this later documentation
+must verify the bundle against its recorded commit, then inspect the later
+documentation-only changes; the payload and its recorded hashes are unchanged.
+
 ## Verified transfer result: September 18, 01:12 Dubai
 
 The frozen source and SSD payload match exactly: **135,374 files,
