@@ -29,7 +29,7 @@ $python = if (Test-Path -LiteralPath $PythonExe) {
     (Get-Command $PythonExe -ErrorAction Stop).Source
 }
 
-$symbols = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT"
+$symbols = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT"
 $startDate = [datetime]::ParseExact(
     $HistoryStart,
     "yyyy-MM-dd",

@@ -224,3 +224,38 @@ def test_trainer_runs_and_writes_gated_artifacts(tmp_path):
     assert set(summary["regression_test"]).issuperset({"sign_hit_rate", "range_coverage"})
     # Chronological embargo must keep splits non-empty and ordered.
     assert summary["rows"]["validation"] > 0 and summary["rows"]["test"] > 0
+
+
+def test_dataset_excludes_retired_symbols_before_parsing(tmp_path) -> None:
+    from liquidity_signal.ai.gbdt_trainer import _load_dataset
+    db = tmp_path / "selected.db"
+    _seed_db(db, rows=8)
+    with sqlite3.connect(db) as conn:
+        conn.execute("UPDATE training_snapshots SET symbol='PEPEUSDT', raw_json='invalid' WHERE symbol='BTCUSDT'")
+        conn.execute("UPDATE training_labels SET symbol='PEPEUSDT' WHERE symbol='BTCUSDT'")
+    rows = _load_dataset(str(db), 60)
+    assert rows and {row["symbol"] for row in rows} == {"ETHUSDT"}
+    assert _load_dataset(str(db), 60, symbols=[" ethusdt "]) == rows
+    with sqlite3.connect(db) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM training_snapshots WHERE symbol='PEPEUSDT'").fetchone()[0] == 8
+    for invalid in ([], ["PEPEUSDT"]):
+        with pytest.raises(ValueError, match="nonempty subset"):
+            _load_dataset(str(db), 60, symbols=invalid)
+
+
+def test_walk_forward_preserves_selected_universe(tmp_path, monkeypatch) -> None:
+    from liquidity_signal.ai import gbdt_trainer as trainer
+    selections = []
+    def load(*args, **kwargs):
+        selections.append(kwargs["symbols"])
+        return [{"event_ts": day * 86_400_000} for day in range(181)]
+    def train(*args, **kwargs):
+        selections.append(kwargs["symbols"])
+        return {"classification_test": {}, "regression_test": {}, "deployment_gate": {"passed": True}}
+    monkeypatch.setattr(trainer, "_load_dataset", load)
+    monkeypatch.setattr(trainer, "train_gbdt_dual_head", train)
+    result = trainer.walk_forward_gbdt("unused", str(tmp_path / "folds"), symbols=["ETHUSDT"])
+    assert result["fold_count"] > 0
+    assert len(selections) == result["fold_count"] + 1
+    assert all(selected == ("ETHUSDT",) for selected in selections)
+    assert result["symbols"] == ["ETHUSDT"]

@@ -38,6 +38,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from liquidity_signal.universe import training_symbols
+
 
 # ---------------------------------------------------------------------------
 # Leakage control
@@ -369,7 +371,9 @@ def _load_dataset(db_path: str, horizon_minutes: int,
                   onchain_db: str | None = None,
                   liquidation_db: str | None = None,
                   cross_venue_db: str | None = None,
-                  data_profile: str = "standard") -> list[dict[str, Any]]:
+                  data_profile: str = "standard",
+                  symbols: list[str] | tuple[str, ...] | None = None) -> list[dict[str, Any]]:
+    selected = training_symbols(symbols)
     archive_profile = data_profile.startswith("archive_")
     uses_hyperliquid = "hyperliquid" in data_profile
     uses_cryptohft = "cryptohft" in data_profile
@@ -426,16 +430,18 @@ def _load_dataset(db_path: str, horizon_minutes: int,
         }
 
     rows: list[dict[str, Any]] = []
-    query = """
+    placeholders = ",".join("?" for _ in selected)
+    query = f"""
         SELECT s.snapshot_id, s.symbol, s.event_ts, s.mark_price, s.raw_json AS snap_json,
                l.label_action, l.terminal_price, l.raw_json AS label_json
         FROM training_labels l
         JOIN training_snapshots s ON s.snapshot_id = l.snapshot_id
         WHERE l.horizon_minutes = ? AND l.status = 'RESOLVED'
               AND s.mark_price > 0
+              AND s.symbol IN ({placeholders})
         ORDER BY s.event_ts ASC
     """
-    for row in cur.execute(query, (horizon_minutes,)):
+    for row in cur.execute(query, (horizon_minutes, *selected)):
         payload = json.loads(row["snap_json"]).get("raw_payload", {})
         features = _row_features(
             payload,
@@ -640,6 +646,7 @@ def train_gbdt_dual_head(
     liquidation_db: str | None = None,
     cross_venue_db: str | None = None,
     data_profile: str = "standard",
+    symbols: list[str] | tuple[str, ...] | None = None,
     window_start_ts: int | None = None,
     validation_start_ts: int | None = None,
     test_start_ts: int | None = None,
@@ -651,10 +658,11 @@ def train_gbdt_dual_head(
     import pandas as pd
     from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
 
+    selected = training_symbols(symbols)
     rows = _load_dataset(
         db_path, horizon_minutes, vision_db=vision_db, onchain_db=onchain_db,
         liquidation_db=liquidation_db, cross_venue_db=cross_venue_db,
-        data_profile=data_profile,
+        data_profile=data_profile, symbols=selected,
     )
     if window_start_ts is not None:
         rows = [row for row in rows if row["event_ts"] >= window_start_ts]
@@ -818,10 +826,12 @@ def train_gbdt_dual_head(
             "task": "gbdt_dual_head",
             "feature_contract_version": 4,
             "data_profile": data_profile,
+            "symbols": list(selected),
         },
         target / "model.joblib",
     )
     summary = {
+        "symbols": list(selected),
         "db_path": db_path,
         "vision_db": vision_db,
         "onchain_db": onchain_db,
@@ -874,6 +884,7 @@ def walk_forward_gbdt(
     liquidation_db: str | None = None,
     cross_venue_db: str | None = None,
     data_profile: str = "standard",
+    symbols: list[str] | tuple[str, ...] | None = None,
     train_days: int = 90,
     validation_days: int = 15,
     test_days: int = 15,
@@ -881,10 +892,11 @@ def walk_forward_gbdt(
     random_seed: int = 42,
 ) -> dict[str, Any]:
     """Train rolling folds and require stable performance across all of them."""
+    selected = training_symbols(symbols)
     rows = _load_dataset(
         db_path, horizon_minutes, vision_db=vision_db, onchain_db=onchain_db,
         liquidation_db=liquidation_db, cross_venue_db=cross_venue_db,
-        data_profile=data_profile,
+        data_profile=data_profile, symbols=selected,
     )
     if not rows:
         raise ValueError(f"No resolved rows for {horizon_minutes}m.")
@@ -913,6 +925,7 @@ def walk_forward_gbdt(
             liquidation_db=liquidation_db,
             cross_venue_db=cross_venue_db,
             data_profile=data_profile,
+            symbols=selected,
             window_start_ts=window["start_ts"],
             validation_start_ts=window["validation_start_ts"],
             test_start_ts=window["test_start_ts"],
@@ -952,6 +965,7 @@ def walk_forward_gbdt(
         "data_profile": data_profile,
         "horizon_minutes": horizon_minutes,
         "split": "walk_forward",
+        "symbols": list(selected),
         "feature_contract_version": 4,
         "configuration": {
             "train_days": train_days,

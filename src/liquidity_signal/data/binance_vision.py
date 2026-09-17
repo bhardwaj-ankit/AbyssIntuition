@@ -32,6 +32,7 @@ from typing import Any, Iterator
 
 import httpx
 
+from liquidity_signal.data.tls import httpx_verify
 
 # Normalised metric row keys (what everything downstream consumes).
 METRIC_KEYS = (
@@ -97,7 +98,9 @@ class BinanceVisionClient:
     def __init__(self, cache_dir: str = "runtime/vision_cache", timeout: float = 30.0) -> None:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self._client = httpx.Client(base_url=self.BASE_URL, timeout=timeout)
+        self._client = httpx.Client(
+            base_url=self.BASE_URL, timeout=timeout, verify=httpx_verify()
+        )
 
     def close(self) -> None:
         self._client.close()

@@ -3,6 +3,7 @@ param(
     [string]$PortableDataRoot,
 
     [string]$RepoRoot = "",
+    [string]$DataRoot = "",
     [string]$PythonExe = "python",
     [switch]$IncludeCaches,
     [switch]$SkipRepositoryBundle
@@ -13,6 +14,11 @@ if (-not $RepoRoot) {
     $RepoRoot = Join-Path $PSScriptRoot "..\.."
 }
 $repo = (Resolve-Path -LiteralPath $RepoRoot).Path
+$sourceData = if ($DataRoot) {
+    (Resolve-Path -LiteralPath $DataRoot).Path
+} else {
+    (Resolve-Path -LiteralPath (Join-Path $repo "runtime")).Path
+}
 $destination = [System.IO.Path]::GetFullPath($PortableDataRoot)
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
 Set-Location -LiteralPath $repo
@@ -23,28 +29,33 @@ $python = if (Test-Path -LiteralPath $PythonExe) {
 }
 
 $databases = @(
-    "runtime/liquidation_history.db",
-    "runtime/training_v6.db",
-    "runtime/training_forward.db",
-    "runtime/vision_metrics.db",
-    "runtime/onchain_data.db",
-    "runtime/cross_venue.db"
-) | Where-Object { Test-Path -LiteralPath $_ }
+    "liquidation_history.db",
+    "training_v6.db",
+    "training_forward.db",
+    "vision_metrics.db",
+    "onchain_data.db",
+    "cross_venue.db",
+    "live_market.db"
+) | ForEach-Object { Join-Path $sourceData $_ } | Where-Object { Test-Path -LiteralPath $_ }
+if (-not $databases) { throw "No production databases found in $sourceData" }
 $backupDir = Join-Path $destination "backups"
 $statusPath = Join-Path $destination "data_backup_status.json"
 $artifacts = @(
-    "runtime/cryptohft_full_history_status.json",
-    "runtime/daily_refresh_status.json",
-    "runtime/data_completeness_forward.json",
-    "runtime/data_operations_health.json"
-) | Where-Object { Test-Path -LiteralPath $_ }
+    "cryptohft_full_history_status.json",
+    "cryptohft_recent_status.json",
+    "recent_history_status.json",
+    "live_market_status.json",
+    "daily_refresh_status.json",
+    "data_completeness_forward.json",
+    "data_operations_health.json"
+) | ForEach-Object { Join-Path $sourceData $_ } | Where-Object { Test-Path -LiteralPath $_ }
 
 $arguments = @(
     "-m", "liquidity_signal.cli", "backup-data",
     "--databases", ($databases -join ','),
     "--output-dir", $backupDir,
     "--status-path", $statusPath,
-    "--retain", "3"
+    "--retain", "0"
 )
 if ($artifacts.Count -gt 0) {
     $arguments += @("--artifacts", ($artifacts -join ','))
@@ -59,9 +70,10 @@ if ($IncludeCaches) {
         "cryptohft_liquidation_cache",
         "vision_cache",
         "vision_supplemental_cache",
-        "cross_venue_cache"
+        "cross_venue_cache",
+        "hyperliquid_liquidation_cache"
     )) {
-        $source = Join-Path $repo "runtime\$cache"
+        $source = Join-Path $sourceData $cache
         if (Test-Path -LiteralPath $source) {
             $target = Join-Path $destination $cache
             robocopy $source $target /E /Z /FFT /R:2 /W:2 /NP | Out-Host

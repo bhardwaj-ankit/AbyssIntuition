@@ -72,6 +72,108 @@ drive letter and `AbyssIntuitionData` directory.
 
 ## User objective and decisions already made
 
+### Current readiness update: 2026-09-17
+
+The scheduled CryptoHFT recovery is complete: 128,076 partitions, zero failures,
+and 4,499,303 processed events; fresh database integrity and coverage checks
+pass. The aligned market cohort still ends on 2026-09-14, and liquidation
+recovery originally ended at 2026-09-15T17:00:00Z exclusive. Live collection
+and the recent catch-up were subsequently authorized; see the activation update below.
+
+**Active universe is now BTC, ETH, SOL, XRP, and NEAR.** The user retired
+PEPE on 2026-09-17. Collector defaults, API/mobile market lists, completeness
+checks, and GBDT dataset/fold selection now exclude it. Existing PEPE rows,
+backups, and legacy source conversions remain for audit; its unit mismatch
+has not been repaired and those rows must not enter training.
+
+The fresh five-symbol audit loaded 53,287 eligible 60-minute rows and 149
+features, with no duplicate symbol/timestamps or infinite inputs. All
+regression targets use horizon-close prices. All seven required coverage
+checks pass; 444.08 effective days support eleven 90/15/15-day walk-forward
+windows with a 30-day step and all three classes in every split. Data is ready
+for walk-forward evaluation, subject to the existing sparse-feature policy;
+coverage is not 100% and model promotion still requires performance gates.
+That audit fitted no model and preceded the live collection activation below.
+
+Evidence: `D:\AbyssIntuitionData\training_readiness_audits\20260917T181851Z\`
+contains `audit.py`, `completeness.json`, and `feature_readiness.json`.
+Feature report SHA-256:
+`52ac5f6e94c83914ffc3a940072aaf0ba27629aee01f2a82b7657a0b8cb21d5d`.
+The earlier six-symbol blocker report is retained as historical evidence.
+All six-symbol transfer counts below describe the original archived universe;
+they do not authorize resuming PEPE collection.
+
+### Live collection activation: 2026-09-17
+
+The user authorized collecting live data and catching up through today. The
+five-symbol universe and the prohibition on automatic training remain in force.
+All six existing databases passed fresh quick_check before activation. Active
+root is `D:\AbyssIntuitionData` on NTFS; the exFAT transfer source is untouched.
+
+Installed tasks on this laptop:
+
+| Task suffix (`AbyssIntuition-`) | Schedule | Scope |
+| --- | --- | --- |
+| `LiquidationCollector` | Continuous; at logon | Ten Binance/Bybit streams |
+| `LiveMarket` | Continuous; at logon | Public Binance market observations every 60 seconds |
+| `RecentHistory` | Hourly | Append mature hourly snapshots and recover new CryptoHFT partitions |
+| `DailyDataRefresh` | 04:30 Dubai time | Binance/on-chain archives, forward cohort, verified backup |
+| `DataHealthWatchdog` | Every 15 minutes | Liquidation freshness, daily refresh and backup health |
+
+Live market raw observations are in `live_market.db`, with request and receive
+timestamps and original source JSON for price/funding, book depth, trades,
+minute candles, OI, taker flow, and account/position ratios. These raw records
+are separate from the archive feature contract; collecting them does not
+silently change the model's inputs. Per-cycle results are in
+`live_market_status.json`. Daily source publication delays still apply.
+
+Initial catch-up completed at 19:13 UTC: 490/490 CryptoHFT partitions, zero
+failures, 16,388 processed events for `[2026-09-15T17:00Z,2026-09-17T18:00Z)`.
+The recent importer leaves the documented archive publication buffer; subsequent
+hourly runs recover those hours. It uses `cryptohft_recent_status.json`, preserving
+the original full-history report. `recent_history_status.json` also records
+64 new snapshots and 320 labels per active coin, through 2026-09-17T15:01Z.
+Four-hour labels require elapsed future observations; do not manufacture newer
+resolved labels. No model training took place.
+
+Daily market/on-chain archives through September 16 completed with no failed
+steps. Today's raw REST catch-up added 1,150 consecutive minute candles per
+coin from 00:00 through 19:09 UTC, plus available five-minute positioning/OI
+and taker flow. Live capture continues afterward. Today's entire daily depth
+and on-chain archives are not yet available. Coverage thresholds are not a
+claim of zero source gaps or a fresh complete feature/model audit.
+
+The daily task explicitly disables cross-venue, Hyperliquid, and automatic
+training; caches live under the NTFS data root. `cross_venue.db` remains
+unchanged with SHA-256
+`c1677a29bbf2d81d10049d79db73a0bdeb18c0cd565865cba45226843eb384be`.
+New backups go into `backups\continuous` with pruning disabled (`--retain 0`),
+including `training_v6.db` and `live_market.db`. The initial backup phase was
+stopped before it could rotate the seven transferred archives. Interrupted
+staging files are preserved; do not treat them as valid backups.
+
+Evidence is under `live_activation_audits\20260917T190235Z` in the active root:
+`before_training_v6.db`, `original_training_rows_preserved.json`,
+`today_public_market.json`, `catchup_verification.json`, and
+`continuity_monitor_restart.json`. The first monitor attempt was superseded
+after a collector exit with code 1. The wrapper now preserves native stderr
+and reaches its retry loop; the collector was deliberately restarted at
+19:21 UTC to load the fix. The original exit cause is not established.
+All 63,948 original snapshots/decisions and 319,740
+labels match their pre-append row hashes, including retired PEPE rows.
+Read `continuity_monitor_restart.json`'s `passed` field and current task/process state rather than
+assuming startup already satisfies the 30-minute continuity gate.
+
+The verified backup is
+`backups\continuous\data-backup-20260917T191236Z.zip` (955,400,093 bytes),
+SHA-256 `ffcbf671474956246c5d5b475e24203eff268ee7a6acad9fe49dabc460cc9092`.
+All seven restored databases passed integrity and checksums; no archives were
+pruned. `activation_status.json` records the collection cutoffs and startup
+state. The hidden monitor continues independently until 23:53 Dubai time;
+its final clean-window result was still pending when this entry was written.
+
+### Established decisions
+
 - Recover the workstation shutdown gap and then ingest **all liquidation
   history available from the selected free source**, not only the outage
   interval, so training covers more market regimes.
@@ -140,7 +242,7 @@ Run-registry entry, Docker deployment, or scheduled task. It must remain that
 way. Live collection has been offline since the cutover until the destination
 laptop assumes ownership.
 
-## Exact unfinished and completed work
+## Original cutover work (superseded by destination updates)
 
 ### CryptoHFT full-history liquidation job: unfinished and resumable
 
@@ -167,6 +269,13 @@ The destination worker computes a new safe end hour, so it can recover the
 additional completed hourly archives accumulated since cutover.
 
 ### Historical training snapshot job: complete
+
+**Destination update, 2026-09-15:** the user authorized extending missing
+coverage. A bounded append added 54 hourly snapshots and 270 labels per symbol,
+through 2026-09-14T23:01:00Z. Current totals are 63,948 snapshots and 319,740
+resolved labels; row hashes prove all original snapshots, decisions, and
+labels unchanged. The figures below remain the original transfer baseline.
+Do not rerun the full historical training worker to reproduce the extension.
 
 `training_v6.db` contains:
 
@@ -393,6 +502,75 @@ Expected baseline: commit `505adc2` or a documented later commit, and all 114
 tests passing. If a later commit exists, inspect its changes instead of
 assuming it is compatible.
 
+#### Destination TLS diagnosis and fix (2026-09-15)
+
+The destination's Avast HTTPS scanner presents certificates issued by
+`Avast Web/Mail Shield Root`. That root was already trusted by Windows but
+absent from HTTPX's default certifi bundle. Default HTTPX verification failed
+for Binance Vision, CryptoHFT, CoinMetrics, and DefiLlama; verified probes using
+`ssl.create_default_context()` succeeded against all four. HTTP responses were
+200, 400 (CryptoHFT's missing download parameters), 200, and 200 respectively;
+the CryptoHFT response confirms TLS connectivity, not a successful download.
+
+`src/liquidity_signal/data/tls.py` now supplies that Windows context to the four
+historical clients: CryptoHFT, Binance Vision, Binance supplemental, and open
+on-chain. It retains `CERT_REQUIRED` and hostname verification. A nonempty
+`SSL_CERT_FILE` or `SSL_CERT_DIR` leaves trust selection to HTTPX, preserving
+its file-before-directory precedence and override errors; other platforms
+retain HTTPX's defaults. No roots were installed, and neither antivirus nor
+TLS verification was disabled.
+
+Local MemoryBIO TLS checks rejected both an untrusted certificate and a
+trusted certificate with the wrong hostname. Regression passed: 120 tests in
+24.57 seconds, with two dependency deprecation warnings.
+
+Production client probes with fresh temporary caches passed: 2025-07-06
+Binance Vision, depth, and taker flow each returned 288 rows; July funding
+returned 93, CoinMetrics 3, and DefiLlama 1. A separate uncached CryptoHFT
+Binance BTCUSDT download for `2025-06-28T05:00:00Z` parsed 22 Parquet rows from
+2,195 bytes. Its SHA-256 was
+`2c76f18a5c5bec1b70ed0a8c11ea919354199257e70117a3598dd7abbb4cbc50`,
+matching the transferred cache. Temporary probe caches were removed. Evidence
+is in `D:\AbyssIntuitionData\restart_audits\20260915T183910Z\`:
+`tls_client_probes.json` and `tls_parquet_download.json`.
+
+All six fresh database `quick_check` results were `ok`; the duplicate-process,
+container, and scheduled-task audit passed. Exactly two workers resumed on
+the existing verified NTFS runtime at `2026-09-15T18:47:46Z`: CryptoHFT wrapper
+PID 23308 and market wrapper PID 20988. All eight previous TLS-failed archive
+partitions recovered. Binance positioning and open on-chain stages completed;
+the market worker advanced to supplemental archives. Runtime evidence is in
+the audit directory above. These PIDs are historical observations: inspect
+current processes before any future restart. No training, promotion, or
+continuous scheduled task was started; completeness gates still apply.
+
+#### Common coverage extension (2026-09-15)
+
+The user subsequently authorized extending missing history. Price snapshots
+now end at 2026-09-14T23:01:00Z, aligned with the closed daily market interval
+ending 2026-09-15T00:00:00Z exclusive. Label-resolution prices extend through
+2026-09-15T03:01:00Z. The running CryptoHFT worker has a later safe hourly
+cutoff; do not restart it merely to match the daily archive boundary.
+
+Funding now covers all 1,332 eight-hour events per symbol over 444 days,
+including recovered February and September gaps. Trade flow has all 127,872
+five-minute buckets per symbol. Three positioning buckets per symbol and
+some depth buckets remain unavailable in fresh source archives; their exact
+dates and counts are retained in the final audit. Preserve these as missing.
+On-chain includes two earlier warmup days for completed-day feature joins.
+
+The `archive_cryptohft` manifest passes labels, positioning, depth, trade flow,
+funding, and on-chain requirements; liquidation recovery is still incomplete.
+Passing the 95% market coverage thresholds is not a claim of zero source gaps.
+No model training, promotion, live collector, or scheduled task was started.
+The Binance REST price/funding client now also uses the verified TLS helper.
+
+Read `PROGRESS.md` and the timestamped evidence under
+`D:\AbyssIntuitionData\coverage_extensions\20260915T191257Z\`, particularly
+`final_coverage_audit.json` and `archive_cryptohft_completeness.json`.
+The one-off `extend_coverage.py` in that directory asserts the old baseline;
+do not rerun it against the extended database. Audit new missing anchors first.
+
 ### Phase 3: transfer into a confirmed empty NTFS data root
 
 Set values only after discovery. The following names are placeholders:
@@ -473,8 +651,8 @@ Set-ExecutionPolicy -Scope Process Bypass
   -StartCollector
 ```
 
-This installs the at-logon live liquidation collector, daily 04:30 archive
-refresh, and 15-minute health watchdog. The dedicated Windows user must remain
+This installs the at-logon live liquidation and market collectors, hourly
+recent-history recovery, daily 04:30 archive refresh, and 15-minute watchdog. The dedicated Windows user must remain
 logged in. Verify scheduled-task state and watch logs for at least 30 minutes.
 Only the destination laptop may own these jobs.
 

@@ -15,6 +15,7 @@ from typing import Any
 import httpx
 
 from liquidity_signal.data.binance_vision import exchange_symbol
+from liquidity_signal.data.tls import httpx_verify
 
 
 def _timestamp_ms(value: str) -> int:
@@ -171,7 +172,9 @@ class BinanceVisionSupplementalClient:
     ) -> None:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self._client = httpx.Client(base_url=self.BASE_URL, timeout=timeout)
+        self._client = httpx.Client(
+            base_url=self.BASE_URL, timeout=timeout, verify=httpx_verify()
+        )
 
     def close(self) -> None:
         self._client.close()
@@ -542,17 +545,24 @@ def build_completeness_manifest(
     """Measure whether every required historical signal family is populated."""
     if expected_snapshot_interval_minutes <= 0:
         raise ValueError("expected_snapshot_interval_minutes must be positive")
+    symbols = list(dict.fromkeys(symbol.strip().upper() for symbol in symbols))
+    if not symbols or any(not symbol for symbol in symbols):
+        raise ValueError("symbols must be nonempty")
+    placeholders = ",".join("?" for _ in symbols)
     uses_cryptohft = "cryptohft" in data_profile
     training = sqlite3.connect(training_db)
     market = sqlite3.connect(market_db)
     liquidation = sqlite3.connect(liquidation_db)
     checks: dict[str, Any] = {}
     snapshots, min_ts, max_ts = training.execute(
-        "SELECT COUNT(*), MIN(event_ts), MAX(event_ts) FROM training_snapshots"
+        f"""SELECT COUNT(*), MIN(event_ts), MAX(event_ts)
+            FROM training_snapshots WHERE symbol IN ({placeholders})""",
+        symbols,
     ).fetchone()
     labels, v2_labels = training.execute(
-        """SELECT COUNT(*), SUM(json_extract(raw_json, '$.raw_payload.label_version')
-           = 'triple-barrier-v2') FROM training_labels"""
+        f"""SELECT COUNT(*), SUM(json_extract(raw_json, '$.raw_payload.label_version')
+           = 'triple-barrier-v2') FROM training_labels WHERE symbol IN ({placeholders})""",
+        symbols,
     ).fetchone()
     checks["labels_v2"] = {
         "rows": labels,
@@ -562,7 +572,8 @@ def build_completeness_manifest(
 
     anchor_rows = (
         training.execute(
-            "SELECT DISTINCT symbol, event_ts FROM training_snapshots"
+            f"SELECT DISTINCT symbol, event_ts FROM training_snapshots WHERE symbol IN ({placeholders})",
+            symbols,
         ).fetchall()
         if snapshots
         else []
@@ -731,7 +742,7 @@ def build_completeness_manifest(
             ),
         }
     if onchain_db and Path(onchain_db).exists() and snapshots:
-        from liquidity_signal.data.open_onchain import OpenOnchainStore, SYMBOL_NETWORK
+        from liquidity_signal.data.open_onchain import SYMBOL_NETWORK, OpenOnchainStore
 
         onchain = OpenOnchainStore(onchain_db)
         onchain._conn.execute(

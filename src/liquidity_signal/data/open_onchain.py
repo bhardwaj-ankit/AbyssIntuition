@@ -10,6 +10,7 @@ from typing import Any
 
 import httpx
 
+from liquidity_signal.data.tls import httpx_verify
 
 SYMBOL_NETWORK = {
     "BTCUSDT": "btc",
@@ -50,7 +51,7 @@ class OpenOnchainClient:
     DEFILLAMA_URL = "https://api.llama.fi"
 
     def __init__(self, timeout: float = 60.0) -> None:
-        self._client = httpx.Client(timeout=timeout)
+        self._client = httpx.Client(timeout=timeout, verify=httpx_verify())
 
     def close(self) -> None:
         self._client.close()

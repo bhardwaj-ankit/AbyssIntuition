@@ -1,5 +1,20 @@
 # Data ingestion (free/public sources only)
 
+Active universe (2026-09-17): BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, NEARUSDT.
+PEPE is retired from default collection, market selection, and GBDT training.
+Existing PEPE records, backups, and legacy source conversions are retained for
+historical audit only. Earlier six-symbol counts below describe archived data.
+
+Collection was activated on the destination laptop on 2026-09-17. The active
+NTFS root is `D:\AbyssIntuitionData`. Ten liquidation streams and minute REST
+market observations run continuously; `RecentHistory` catches up mature hourly
+samples and CryptoHFT each hour. Binance/on-chain archives refresh daily at
+04:30 Dubai time. Daily refresh explicitly disables cross-venue, Hyperliquid,
+and automatic training. `live_market.db` retains raw public observations with
+request/receive timestamps; it does not change the archive feature contract.
+See the bootstrap activation section and the timestamped runtime audit for
+actual coverage, PIDs, backup verification, and the continuity gate.
+
 The active training pipeline does not require Tardis, CoinGlass, Coinalyze,
 Velo, or any paid API key. Data readiness is measured by
 `runtime/data_completeness.json`, and normal GBDT training fails closed while a
@@ -60,7 +75,7 @@ Reproduce or extend the free backfills with:
 
 ```bash
 liquidity-signal ingest-vision-metrics \
-  --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT" \
+  --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT" \
   --start 2026-02-07 --end 2026-08-05
 
 liquidity-signal ingest-vision-supplemental \
@@ -169,7 +184,7 @@ The repository therefore accumulates normalized liquidation events forward:
 
 ```bash
 liquidity-signal capture-liquidations \
-  --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT" \
+  --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT" \
   --db-path runtime/liquidation_history.db
 ```
 

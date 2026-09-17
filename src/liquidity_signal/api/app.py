@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from liquidity_signal.universe import ACTIVE_SYMBOLS
 from liquidity_signal.ai.deployment import deployment_status
 
 from liquidity_signal.models import (
@@ -39,7 +40,7 @@ from liquidity_signal.service.engine import SignalEngine
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     if "pytest" not in sys.modules:
-        engine.start_liquidation_watchlist(["BTCUSDT", "ETHUSDT", "SOLUSDT", "NEARUSDT", "PEPEUSDT", "XRPUSDT"], interval_seconds=45)
+        engine.start_liquidation_watchlist(list(ACTIVE_SYMBOLS), interval_seconds=45)
     yield
     bybit_demo_bot.close()
     engine.close()

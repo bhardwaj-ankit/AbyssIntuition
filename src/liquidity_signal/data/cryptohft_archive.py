@@ -18,9 +18,9 @@ from typing import Any
 
 import httpx
 
+from liquidity_signal.data.tls import httpx_verify
 from liquidity_signal.models import Direction, LiquidationEventPoint
 from liquidity_signal.service.liquidation_store import LiquidationStore
-
 
 API_URL = "https://api.cryptohftdata.com/v1/download"
 VENUE_IDS = {"binance": "binance_futures", "bybit": "bybit"}
@@ -173,7 +173,9 @@ class CryptoHFTArchiveClient:
         self.download_workers = max(1, download_workers)
         self._request_times: deque[float] = deque()
         self._rate_lock = threading.Lock()
-        self._client = httpx.Client(timeout=timeout, follow_redirects=True)
+        self._client = httpx.Client(
+            timeout=timeout, follow_redirects=True, verify=httpx_verify()
+        )
 
     def close(self) -> None:
         self._client.close()

@@ -14,12 +14,12 @@ $powerShellPath = (Get-Command powershell.exe -ErrorAction Stop).Source
 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
 $collectorArguments = (
-    "-NoProfile -ExecutionPolicy Bypass -File `"$collectorScript`" " +
+    "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$collectorScript`" " +
     "-CliPath `"$cliPath`" " +
     "-DataRoot `"$DataRoot`""
 )
 $refreshArguments = (
-    "-NoProfile -ExecutionPolicy Bypass -File `"$refreshScript`" " +
+    "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$refreshScript`" " +
     "-CliPath `"$cliPath`" " +
     "-DataRoot `"$DataRoot`""
 )
@@ -73,6 +73,11 @@ Register-ScheduledTask `
 if ($StartCollector) {
     Start-ScheduledTask -TaskName "AbyssIntuition-LiquidationCollector"
 }
+
+$activeDataRoot = if ($DataRoot) { $DataRoot } else { Join-Path $repoRoot "runtime" }
+& (Join-Path $PSScriptRoot "install_market_history_tasks.ps1") `
+    -DataRoot $activeDataRoot `
+    -StartWorkers:$StartCollector
 
 Write-Output "Installed AbyssIntuition-LiquidationCollector at logon."
 Write-Output "Installed AbyssIntuition-DailyDataRefresh daily at $DailyRefreshTime local time."

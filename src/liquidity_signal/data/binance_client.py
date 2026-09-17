@@ -4,12 +4,13 @@ from typing import Any, Dict, List
 
 import httpx
 
+from liquidity_signal.data.tls import httpx_verify
 
 class BinanceFuturesClient:
     BASE_URL = "https://fapi.binance.com"
 
     def __init__(self, timeout: float = 10.0) -> None:
-        self._client = httpx.Client(base_url=self.BASE_URL, timeout=timeout)
+        self._client = httpx.Client(base_url=self.BASE_URL, timeout=timeout, verify=httpx_verify())
 
     def close(self) -> None:
         self._client.close()

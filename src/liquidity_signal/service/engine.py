@@ -7,6 +7,7 @@ import time
 from typing import Any
 from uuid import uuid4
 
+from liquidity_signal.universe import ACTIVE_SYMBOLS
 from liquidity_signal.config import SignalConfig
 from liquidity_signal.data.binance_client import BinanceFuturesClient
 from liquidity_signal.data.bybit_client import BybitPublicClient
@@ -63,7 +64,7 @@ from liquidity_signal.service.liquidation_store import LiquidationStore
 from liquidity_signal.signal.ai_refiner import refine_signal_with_ai
 from liquidity_signal.signal.scorer import score_features_with_breakdown
 
-SUPPORTED_MARKET_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "NEARUSDT", "PEPEUSDT", "XRPUSDT")
+SUPPORTED_MARKET_SYMBOLS = ACTIVE_SYMBOLS
 BINANCE_HISTORICAL_SYMBOL_ALIASES = {
     "PEPEUSDT": "1000PEPEUSDT",
 }

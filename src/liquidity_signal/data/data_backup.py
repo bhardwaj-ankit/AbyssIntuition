@@ -43,6 +43,10 @@ def _online_sqlite_backup(source_path: Path, destination_path: Path) -> dict[str
     source = sqlite3.connect(source_path, timeout=60.0)
     destination = sqlite3.connect(destination_path)
     try:
+        # Pin a read snapshot. Without this, frequent WAL commits can restart
+        # the incremental backup indefinitely on a large live database.
+        source.execute("BEGIN")
+        source.execute("SELECT COUNT(*) FROM sqlite_master").fetchone()
         source.backup(destination, pages=4096, sleep=0.05)
         check = destination.execute("PRAGMA quick_check").fetchone()[0]
         if check != "ok":
@@ -66,8 +70,10 @@ def _online_sqlite_backup(source_path: Path, destination_path: Path) -> dict[str
 
 def prune_backups(output_dir: str, retain: int) -> list[str]:
     """Remove only older archives produced by this module."""
-    if retain < 1:
-        raise ValueError("retain must be at least one")
+    if retain < 0:
+        raise ValueError("retain must be nonnegative")
+    if retain == 0:
+        return []
     root = Path(output_dir)
     archives = sorted(
         root.glob("data-backup-*.zip"), key=lambda path: path.stat().st_mtime, reverse=True

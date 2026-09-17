@@ -7,15 +7,10 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from liquidity_signal.universe import ACTIVE_SYMBOLS
 
-DEFAULT_SYMBOLS = (
-    "BTCUSDT",
-    "ETHUSDT",
-    "SOLUSDT",
-    "XRPUSDT",
-    "NEARUSDT",
-    "PEPEUSDT",
-)
+
+DEFAULT_SYMBOLS = ACTIVE_SYMBOLS
 
 
 def archive_recovery_window(
@@ -433,6 +428,8 @@ def run_daily_refresh(
     test_days: int = 15,
     step_days: int = 30,
     run_training_when_ready: bool = True,
+    include_cross_venue: bool = True,
+    include_hyperliquid: bool = True,
 ) -> dict[str, Any]:
     """Refresh free sources and maintain a strict forward-only training cohort."""
     from liquidity_signal.ai.gbdt_trainer import walk_forward_gbdt
@@ -475,6 +472,7 @@ def run_daily_refresh(
         "archive_recovery": recovery,
         "symbols": selected,
         "forward_training_db": forward_training_db,
+        "collection_policy": {"cross_venue": include_cross_venue, "hyperliquid": include_hyperliquid, "automatic_training": run_training_when_ready},
         "steps": {},
     }
     write_refresh_report(report, report_path)
@@ -567,7 +565,8 @@ def run_daily_refresh(
             binance.close()
             store.close()
 
-    _run_step(report, "cross_venue", refresh_cross_venue, report_path)
+    if include_cross_venue:
+        _run_step(report, "cross_venue", refresh_cross_venue, report_path)
 
     def refresh_onchain() -> dict[str, Any]:
         client = OpenOnchainClient()
@@ -591,7 +590,8 @@ def run_daily_refresh(
             client.close()
             store.close()
 
-    _run_step(report, "hyperliquid_liquidations", refresh_hyperliquid, report_path)
+    if include_hyperliquid:
+        _run_step(report, "hyperliquid_liquidations", refresh_hyperliquid, report_path)
 
     safe_window = capture_safe_lookback_hours(
         liquidation_db, selected, forward_lookback_hours
@@ -635,13 +635,14 @@ def run_daily_refresh(
             selected,
             onchain_db=onchain_db,
         )
-        cross_store = CrossVenueStore(cross_venue_db)
-        try:
-            require_cross_venue_coverage(
-                manifest, cross_store, forward_training_db, selected
-            )
-        finally:
-            cross_store.close()
+        if include_cross_venue:
+            cross_store = CrossVenueStore(cross_venue_db)
+            try:
+                require_cross_venue_coverage(
+                    manifest, cross_store, forward_training_db, selected
+                )
+            finally:
+                cross_store.close()
         write_manifest(manifest, completeness_path)
         return manifest
 
@@ -667,7 +668,8 @@ def run_daily_refresh(
                 vision_db=market_db,
                 onchain_db=onchain_db,
                 liquidation_db=liquidation_db,
-                cross_venue_db=cross_venue_db,
+                cross_venue_db=cross_venue_db if include_cross_venue else None,
+                symbols=selected,
                 train_days=train_days,
                 validation_days=validation_days,
                 test_days=test_days,

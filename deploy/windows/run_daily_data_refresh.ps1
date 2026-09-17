@@ -23,13 +23,17 @@ $completenessPath = Join-Path $runtimeDirectory "data_completeness_forward.json"
 $refreshPath = Join-Path $runtimeDirectory "daily_refresh_status.json"
 $backupPath = Join-Path $runtimeDirectory "data_backup_status.json"
 $healthPath = Join-Path $runtimeDirectory "data_operations_health.json"
-$backupDirectory = Join-Path $runtimeDirectory "backups"
+$backupDirectory = Join-Path $runtimeDirectory "backups\continuous"
 Set-Location -LiteralPath $repoRoot
 
 "$(Get-Date -Format o) starting free-source daily refresh" |
     Tee-Object -FilePath $logPath -Append
 & $CliPath daily-data-refresh `
     --retry-days 3 `
+    --no-run-training-when-ready `
+    --no-include-cross-venue `
+    --no-include-hyperliquid `
+    --cache-root $runtimeDirectory `
     --forward-lookback-hours 36 `
     --market-db $marketDb `
     --onchain-db $onchainDb `
@@ -43,9 +47,10 @@ $refreshExitCode = $LASTEXITCODE
 "$(Get-Date -Format o) daily refresh exited with code $refreshExitCode" |
     Tee-Object -FilePath $logPath -Append
 & $CliPath backup-data `
-    --databases "$liquidationDb,$trainingDb,$marketDb,$onchainDb,$crossVenueDb" `
+    --databases "$liquidationDb,$trainingDb,$marketDb,$onchainDb,$crossVenueDb,$runtimeDirectory\training_v6.db,$runtimeDirectory\live_market.db" `
     --artifacts "$refreshPath,$completenessPath,$healthPath" `
     --output-dir $backupDirectory `
+    --retain 0 `
     --status-path $backupPath 2>&1 |
     Tee-Object -FilePath $logPath -Append
 $backupExitCode = $LASTEXITCODE

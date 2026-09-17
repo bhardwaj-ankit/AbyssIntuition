@@ -65,12 +65,20 @@ try {
     while ($true) {
         "$(Get-Date -Format o) starting liquidation collector" |
             Tee-Object -FilePath $logPath -Append
-        & $CliPath capture-liquidations `
-            --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT" `
-            --db-path $liquidationDb `
-            --status-interval-seconds 30 2>&1 |
-            Tee-Object -FilePath $logPath -Append
-        $collectorExitCode = $LASTEXITCODE
+        # Windows PowerShell can turn native stderr into a terminating error
+        # under Stop, bypassing the restart loop and losing the diagnostic.
+        $ErrorActionPreference = "Continue"
+        try {
+            & $CliPath capture-liquidations `
+                --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT" `
+                --db-path $liquidationDb `
+                --status-interval-seconds 30 2>&1 |
+                Tee-Object -FilePath $logPath -Append
+            $collectorExitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = "Stop"
+        }
         "$(Get-Date -Format o) collector exited with code $collectorExitCode; restarting in 15 seconds" |
             Tee-Object -FilePath $logPath -Append
         Start-Sleep -Seconds 15

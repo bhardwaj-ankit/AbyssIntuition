@@ -103,8 +103,8 @@ def test_completeness_manifest_handles_empty_forward_cohort(tmp_path) -> None:
     market_db = tmp_path / "market.db"
     onchain_db = tmp_path / "onchain.db"
     training = sqlite3.connect(training_db)
-    training.execute("CREATE TABLE training_snapshots(event_ts INTEGER)")
-    training.execute("CREATE TABLE training_labels(raw_json TEXT)")
+    training.execute("CREATE TABLE training_snapshots(symbol TEXT, event_ts INTEGER)")
+    training.execute("CREATE TABLE training_labels(symbol TEXT DEFAULT 'BTCUSDT', raw_json TEXT)")
     training.close()
     liquidation = sqlite3.connect(liquidation_db)
     liquidation.execute(
@@ -146,12 +146,15 @@ def test_completeness_measures_availability_at_snapshot_anchors(tmp_path) -> Non
 
     training = sqlite3.connect(training_db)
     training.execute("CREATE TABLE training_snapshots(symbol TEXT, event_ts INTEGER)")
-    training.execute("CREATE TABLE training_labels(raw_json TEXT)")
+    training.execute("CREATE TABLE training_labels(symbol TEXT DEFAULT 'BTCUSDT', raw_json TEXT)")
     training.execute("INSERT INTO training_snapshots VALUES('BTCUSDT', ?)", (event_ts,))
     training.execute(
-        "INSERT INTO training_labels VALUES(?)",
+        "INSERT INTO training_labels(raw_json) VALUES(?)",
         ('{"raw_payload":{"label_version":"triple-barrier-v2"}}',),
     )
+    # Retained retired records must not alter the active cohort or parse labels.
+    training.execute("INSERT INTO training_snapshots VALUES('PEPEUSDT', ?)", (event_ts + 86_400_000,))
+    training.execute("INSERT INTO training_labels VALUES('PEPEUSDT', 'invalid')")
     training.commit()
     training.close()
 
@@ -229,6 +232,8 @@ def test_completeness_measures_availability_at_snapshot_anchors(tmp_path) -> Non
         onchain_db=str(onchain_db),
     )
 
+    assert manifest["checks"]["labels_v2"]["rows"] == 1
+    assert manifest["period"]["max_ts"] == event_ts
     assert manifest["complete"] is True
     assert manifest["checks"]["positioning"]["minimum_coverage"] == 1.0
     assert manifest["checks"]["liquidations"]["minimum_capture_coverage"] == 1.0

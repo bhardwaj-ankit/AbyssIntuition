@@ -16,7 +16,7 @@ if (-not $CliPath) {
 $powerShellPath = (Get-Command powershell.exe -ErrorAction Stop).Source
 $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $arguments = (
-    "-NoProfile -ExecutionPolicy Bypass -File `"$watchdogScript`" " +
+    "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$watchdogScript`" " +
     "-CliPath `"$CliPath`" " +
     "-DataRoot `"$DataRoot`""
 )

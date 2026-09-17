@@ -4,20 +4,35 @@ This is the canonical script order for moving AbyssIntuition data collection to
 a dedicated Windows machine. It covers the one-time historical backfill and the
 continuous jobs required afterward.
 
+Current collection settings disable automatic training and optional cross-venue/
+Hyperliquid ingestion. New backups use `backups\continuous` with pruning
+disabled, preserving transferred archives. The live market database is raw
+provenance storage; its observations are not automatically substituted for
+archive model features.
+
 For a new Codex session on the destination laptop, begin with
 [`NEW_LAPTOP_BOOTSTRAP.md`](NEW_LAPTOP_BOOTSTRAP.md). It contains the complete
 verified state, no-assumption preflight contract, model context, and this
 runbook's required execution order.
 
-## Current ownership state
+## Active universe update: 2026-09-17
+
+Use BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, and NEARUSDT. PEPE has been retired;
+its existing data and backups remain intact. GBDT dataset loading, coverage
+audits, and every evaluation fold use the selected active universe.
+The original historical recovery is complete. Live collection and scheduled
+tasks were enabled on September 17 at the user's request. Do not resume the completed historical jobs described in the dated
+cutover record below. See the bootstrap document for current audit results.
+
+## Original cutover state (2026-09-12)
 
 As of the 2026-09-12 21:48 UTC cutover audit, the original workstation has no
 running AbyssIntuition data process and no remaining scheduled task, service,
 Startup entry, Run-registry entry, or Docker deployment. Its three scheduled
 tasks were unregistered. It will not resume collection after reboot.
 
-The destination laptop has not yet assumed ownership, so live liquidation
-capture is currently offline. The transferred CryptoHFT job must resume from
+At cutover the destination laptop had not assumed ownership, so live liquidation
+capture was offline. The transferred CryptoHFT job needed to resume from
 2,325/127,248 partitions and 7,359 cached files. Historical hourly snapshot
 generation is already complete for all six symbols. See
 `historical-data-handoff-2026-09-12.md` for exact counts, stopped PIDs, database
@@ -47,10 +62,10 @@ to merge them later.
 
 ## 1. Prepare the dedicated machine
 
-Use a fixed drive letter for the portable SSD, such as `E:`. Windows Disk
-Management can assign a persistent letter. Use NTFS, keep adequate free space,
-disable USB selective suspend for the dedicated host, and never disconnect the
-drive while a worker or collector is running.
+Use a fixed NTFS volume for active data. On this laptop that is
+`D:\AbyssIntuitionData`; the attached `E:` exFAT SSD is transfer media only.
+Keep adequate free space and never disconnect an active data drive while a
+worker is running. Do not reformat or overwrite the verified transfer SSD.
 
 Clone the published branch and install the application:
 
@@ -67,7 +82,7 @@ python -m venv .venv
 Use one data directory for every job:
 
 ```powershell
-$DataRoot = "E:\AbyssIntuitionData"
+$DataRoot = "D:\AbyssIntuitionData"
 $PythonExe = (Resolve-Path ".\.venv\Scripts\python.exe").Path
 New-Item -ItemType Directory -Force -Path $DataRoot
 ```
@@ -140,7 +155,10 @@ It launches three hidden, independent workers:
   2025-06-28 through the latest safely completed archive hour;
 - `market`: Binance positioning, depth, funding, taker flow, and open on-chain
   history;
-- `training`: hourly snapshots and resolved labels for all six symbols.
+- `training`: hourly snapshots and resolved labels for the five active symbols.
+
+Do not rerun this full-history training-data task for routine updates; the
+hourly RecentHistory task appends only missing anchors.
 
 The process list is written to
 `$DataRoot\historical_backfill_processes.json`. Check it and the logs with:
@@ -182,6 +200,8 @@ Run this from a normal PowerShell session for the dedicated Windows user:
 
 This installs:
 
+- `AbyssIntuition-LiveMarket` at logon, capturing public market observations every minute;
+- `AbyssIntuition-RecentHistory` hourly, appending mature hourly samples and recent CryptoHFT archives;
 - `AbyssIntuition-LiquidationCollector` at user logon with automatic restart;
 - `AbyssIntuition-DailyDataRefresh` daily at 04:30 local time, with
   `StartWhenAvailable` and wake enabled;
@@ -201,7 +221,7 @@ Get-ScheduledTaskInfo -TaskName "AbyssIntuition-LiquidationCollector"
 Get-Content "$DataRoot\logs\liquidation_collector.log" -Tail 50
 ```
 
-Wait at least 30 minutes before retiring the old host. Confirm all 12 streams
+Wait at least 30 minutes before retiring the old host. Confirm all 10 active streams
 are fresh and common-bucket continuity is at least 95%:
 
 ```powershell
@@ -237,18 +257,19 @@ Healthy collection requires:
 ## 7. Train only after completeness passes
 
 Historical download completion does not itself authorize model promotion. Run
-the source-isolated CryptoHFT profile against the SSD databases:
+the source-isolated CryptoHFT profile against the active NTFS databases:
 
 ```powershell
 & $PythonExe -m liquidity_signal.cli train-archive-baseline `
   --include-cryptohft `
+  --symbols "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT" `
   --db-path "$DataRoot\training_v6.db" `
   --vision-db "$DataRoot\vision_metrics.db" `
   --onchain-db "$DataRoot\onchain_data.db" `
   --liquidation-audit-db "$DataRoot\liquidation_history.db" `
   --cross-venue-db "$DataRoot\cross_venue.db" `
   --completeness-manifest "$DataRoot\data_completeness_archive_cryptohft.json" `
-  --output-dir "$DataRoot\models\gbdt-archive-cryptohft-60m-v1"
+  --output-dir "$DataRoot\models\gbdt-archive-cryptohft-five-symbol-60m-v1"
 ```
 
 The expanded model must be compared with the retained 180-day baseline under

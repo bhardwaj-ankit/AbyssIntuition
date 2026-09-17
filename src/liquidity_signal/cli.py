@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from liquidity_signal.universe import ACTIVE_SYMBOLS_CSV, training_symbols
 from liquidity_signal.ai.local_lora_trainer import evaluate_local_lora, train_local_lora
 from liquidity_signal.ai.evaluate import evaluate_signal_prior
 from liquidity_signal.ai.deployment import assess_lora_candidate, deployment_status
@@ -119,7 +120,7 @@ def backfill_training(
 
 @app.command("backfill-training-batch")
 def backfill_training_batch(
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,NEARUSDT,PEPEUSDT,XRPUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     lookback_hours: int = 24,
     step_minutes: int = 5,
     max_samples_per_symbol: int = 400,
@@ -221,7 +222,7 @@ def export_lora(
 @app.command("prepare-mlx-lora")
 def prepare_mlx_lora(
     horizon_minutes: int = 5,
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     input_dir: str = "runtime/lora_exports",
     output_dir: str = "runtime/mlx_lora_data",
     balance_mode: str = "undersample_majority",
@@ -267,7 +268,7 @@ def prepare_mlx_lora(
 @app.command("combine-lora-exports")
 def combine_lora_exports(
     horizon_minutes: int = 15,
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     input_dir: str = "runtime/lora_exports",
     output_path: str = "runtime/lora_exports/crypto_combined_chatml.jsonl",
     balance_mode: str = "undersample_majority",
@@ -430,7 +431,7 @@ def train_archive_baseline_command(
     liquidation_audit_db: str = "runtime/liquidation_history.db",
     cross_venue_db: str = "runtime/cross_venue.db",
     completeness_manifest: str | None = None,
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     snapshot_interval_minutes: int = 60,
     train_days: int = 90,
     validation_days: int = 15,
@@ -470,7 +471,7 @@ def train_archive_baseline_command(
     manifest_path = completeness_manifest or (
         f"runtime/data_completeness_{data_profile}.json"
     )
-    selected = [item.strip().upper() for item in symbols.split(",") if item.strip()]
+    selected = list(training_symbols([item for item in symbols.split(",") if item.strip()]))
     market_store = VisionSupplementalStore(vision_db)
     market_store.close()
     audit_store = LiquidationStore(Path(liquidation_audit_db))
@@ -523,6 +524,7 @@ def train_archive_baseline_command(
         ),
         cross_venue_db=cross_venue_db if include_cross_venue else None,
         data_profile=data_profile,
+        symbols=selected,
         train_days=train_days,
         validation_days=validation_days,
         test_days=test_days,
@@ -538,7 +540,7 @@ def train_archive_baseline_command(
 
 @app.command("ingest-cross-venue")
 def ingest_cross_venue_command(
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     start: str = typer.Option(..., help="Start date YYYY-MM-DD (UTC)."),
     end: str = typer.Option(..., help="End date YYYY-MM-DD (UTC, inclusive)."),
     db_path: str = "runtime/cross_venue.db",
@@ -616,7 +618,7 @@ def ingest_cross_venue_command(
 
 @app.command("ingest-vision-metrics")
 def ingest_vision_metrics(
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     start: str = typer.Option(..., help="Start date YYYY-MM-DD (UTC)."),
     end: str = typer.Option(..., help="End date YYYY-MM-DD (UTC, inclusive)."),
     db_path: str = "runtime/vision_metrics.db",
@@ -650,7 +652,7 @@ def ingest_vision_metrics(
 
 @app.command("ingest-vision-supplemental")
 def ingest_vision_supplemental(
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     start: str = typer.Option(..., help="Start date YYYY-MM-DD (UTC)."),
     end: str = typer.Option(..., help="End date YYYY-MM-DD (UTC, inclusive)."),
     db_path: str = "runtime/vision_metrics.db",
@@ -700,7 +702,7 @@ def ingest_vision_supplemental(
 
 @app.command("ingest-public-funding")
 def ingest_public_funding(
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     start: str = typer.Option(..., help="Start date YYYY-MM-DD (UTC)."),
     end: str = typer.Option(..., help="End date YYYY-MM-DD (UTC, inclusive)."),
     db_path: str = "runtime/vision_metrics.db",
@@ -750,7 +752,7 @@ def data_completeness_command(
     liquidation_db: str = "runtime/liquidation_history.db",
     cross_venue_db: str = "runtime/cross_venue.db",
     onchain_db: str = "runtime/onchain_data.db",
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     output_path: str = "runtime/data_completeness.json",
 ) -> None:
     """Write a fail-closed manifest for every required historical data family."""
@@ -793,7 +795,7 @@ def data_completeness_command(
 
 @app.command("daily-data-refresh")
 def daily_data_refresh_command(
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     through: str | None = typer.Option(
         None, help="Last archive date YYYY-MM-DD; defaults to yesterday UTC."
     ),
@@ -809,6 +811,9 @@ def daily_data_refresh_command(
     report_path: str = "runtime/daily_refresh_status.json",
     forward_lookback_hours: int = typer.Option(36, min=5),
     run_training_when_ready: bool = True,
+    include_cross_venue: bool = True,
+    include_hyperliquid: bool = True,
+    cache_root: str | None = None,
 ) -> None:
     """Refresh every free source and grow the strict forward-only cohort."""
     from datetime import date, timedelta
@@ -834,6 +839,14 @@ def daily_data_refresh_command(
         report_path=report_path,
         forward_lookback_hours=forward_lookback_hours,
         run_training_when_ready=run_training_when_ready,
+        include_cross_venue=include_cross_venue,
+        include_hyperliquid=include_hyperliquid,
+        **({name: str(Path(cache_root) / folder) for name, folder in {
+            "vision_cache_dir": "vision_cache",
+            "supplemental_cache_dir": "vision_supplemental_cache",
+            "hyperliquid_cache_dir": "hyperliquid_liquidation_cache",
+            "cross_venue_cache_dir": "cross_venue_cache",
+        }.items()} if cache_root else {}),
     )
     console.print_json(data=report)
     if report["status"] != "complete":
@@ -865,7 +878,7 @@ def data_operations_health_command(
     refresh_report_path: str = "runtime/daily_refresh_status.json",
     backup_status_path: str = "runtime/data_backup_status.json",
     output_path: str = "runtime/data_operations_health.json",
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     stale_after_minutes: int = typer.Option(10, min=5),
     continuity_window_minutes: int = typer.Option(30, min=10),
     refresh_stale_after_hours: int = typer.Option(36, min=1),
@@ -912,7 +925,7 @@ def backup_data_command(
     ),
     output_dir: str = "runtime/backups",
     status_path: str = "runtime/data_backup_status.json",
-    retain: int = typer.Option(7, min=1),
+    retain: int = typer.Option(7, min=0, help="Backup generations to keep; zero disables pruning."),
 ) -> None:
     """Create and restore-verify a consistent compressed SQLite backup."""
     from liquidity_signal.data.daily_refresh import write_refresh_report
@@ -972,7 +985,7 @@ def ingest_open_onchain_command(
 def ingest_hyperliquid_liquidations_command(
     start: str = typer.Option(..., help="Start date YYYY-MM-DD (UTC)."),
     end: str = typer.Option(..., help="End date YYYY-MM-DD (UTC, inclusive)."),
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     db_path: str = "runtime/liquidation_history.db",
     cache_dir: str = "runtime/hyperliquid_liquidation_cache",
 ) -> None:
@@ -1006,7 +1019,7 @@ def ingest_hyperliquid_liquidations_command(
 def ingest_cryptohft_liquidations_command(
     start: str = typer.Option(..., help="Inclusive ISO-8601 UTC timestamp."),
     end: str = typer.Option(..., help="Exclusive ISO-8601 UTC timestamp."),
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     venues: str = "binance,bybit",
     db_path: str = "runtime/liquidation_history.db",
     cache_dir: str = "runtime/cryptohft_liquidation_cache",
@@ -1089,7 +1102,7 @@ def invalidate_capture_interval_command(
 
 @app.command("capture-liquidations")
 def capture_liquidations_command(
-    symbols: str = "BTCUSDT,ETHUSDT,SOLUSDT,XRPUSDT,NEARUSDT,PEPEUSDT",
+    symbols: str = ACTIVE_SYMBOLS_CSV,
     db_path: str = "runtime/liquidation_history.db",
     duration_seconds: int = typer.Option(
         0, help="Stop after N seconds; zero runs continuously."
