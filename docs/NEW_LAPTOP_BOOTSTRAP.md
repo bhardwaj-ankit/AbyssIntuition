@@ -11,8 +11,9 @@ not guess.
 `docs/LAPTOP_TRANSFER_2026-09-17.md` before executing this document's older
 transfer commands. The new package uses a separate transfer directory and
 seven production databases. Its manifest must say `complete` before restore.
-Collection ownership is unresolved while the manifest says
-`awaiting_user_choice`; do not start destination collectors in that state.
+The user authorized full collection ownership transfer on September 18. Source
+tasks are disabled. Require the manifest to confirm `full_handoff` and completed
+verification before starting destination collectors.
 The September 12 counts and unfinished-worker instructions below are historical
 and do not authorize restarting the now-completed historical jobs.
 
