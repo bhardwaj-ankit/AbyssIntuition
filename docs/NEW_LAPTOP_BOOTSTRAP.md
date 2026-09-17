@@ -7,6 +7,15 @@ not guess.
 
 ## Copy-paste prompt for Codex on the new laptop
 
+**September 17 transfer preparation:** read
+`docs/LAPTOP_TRANSFER_2026-09-17.md` before executing this document's older
+transfer commands. The new package uses a separate transfer directory and
+seven production databases. Its manifest must say `complete` before restore.
+Collection ownership is unresolved while the manifest says
+`awaiting_user_choice`; do not start destination collectors in that state.
+The September 12 counts and unfinished-worker instructions below are historical
+and do not authorize restarting the now-completed historical jobs.
+
 ```text
 Open and read docs/NEW_LAPTOP_BOOTSTRAP.md completely, then read every file in
 its "Mandatory project context" section in the stated order. Treat those files
