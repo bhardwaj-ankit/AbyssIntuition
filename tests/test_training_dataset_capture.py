@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 from liquidity_signal.models import (
@@ -8,6 +9,7 @@ from liquidity_signal.models import (
     ScoringBreakdown,
     SignalExplainResult,
     SignalResult,
+    TrainingSnapshotLabel,
 )
 from liquidity_signal.service.engine import SignalEngine
 from liquidity_signal.service.liquidation_store import LiquidationStore
@@ -134,4 +136,62 @@ def test_training_dataset_capture_persists_snapshots_and_resolves_labels(tmp_pat
     assert all(label.status == "RESOLVED" for label in dataset.labels)
     assert any(label.label_action == Direction.LONG for label in dataset.labels)
 
+    store.close()
+
+
+def test_training_label_v2_schema_migrates_existing_store(tmp_path: Path) -> None:
+    db_path = tmp_path / "legacy_training_labels.db"
+    connection = sqlite3.connect(db_path)
+    connection.execute(
+        """
+        CREATE TABLE training_labels (
+            snapshot_id TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            event_ts INTEGER NOT NULL,
+            horizon_minutes INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            label_action TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            resolved_at INTEGER,
+            upper_barrier_price REAL NOT NULL,
+            lower_barrier_price REAL NOT NULL,
+            terminal_price REAL,
+            max_up_pct REAL NOT NULL DEFAULT 0.0,
+            max_down_pct REAL NOT NULL DEFAULT 0.0,
+            raw_json TEXT NOT NULL,
+            PRIMARY KEY(snapshot_id, horizon_minutes)
+        )
+        """
+    )
+    connection.commit()
+    connection.close()
+
+    store = LiquidationStore(db_path=db_path)
+    store.persist_training_label(
+        TrainingSnapshotLabel(
+            snapshot_id="v2-sample",
+            symbol="BTCUSDT",
+            event_ts=1_700_000_000_000,
+            horizon_minutes=60,
+            status="RESOLVED",
+            label_action=Direction.LONG,
+            expires_at=1_700_003_600_000,
+            resolved_at=1_700_003_600_000,
+            upper_barrier_price=101.0,
+            lower_barrier_price=99.0,
+            barrier_first_hit=Direction.LONG,
+            barrier_hit_ts=1_700_000_060_000,
+            barrier_hit_price=101.0,
+            horizon_close_price=102.0,
+            horizon_return_bps=200.0,
+            max_favorable_excursion_pct=2.5,
+            max_adverse_excursion_pct=0.4,
+            terminal_price=102.0,
+        )
+    )
+
+    loaded = store.load_training_labels_for_snapshot("v2-sample")[0]
+    assert loaded["barrier_first_hit"] == "LONG"
+    assert loaded["horizon_close_price"] == 102.0
+    assert loaded["horizon_return_bps"] == 200.0
     store.close()

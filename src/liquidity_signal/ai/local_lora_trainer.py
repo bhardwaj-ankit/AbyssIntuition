@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import inspect
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 
@@ -18,6 +20,7 @@ class LocalLoraTrainingConfig:
     learning_rate: float = 2e-4
     epochs: int = 3
     micro_batch_size: int = 2
+    evaluation_batch_size: int = 16
     gradient_accumulation_steps: int = 8
     lora_r: int = 16
     lora_alpha: int = 32
@@ -109,20 +112,54 @@ def train_local_lora(config_path: str | Path) -> dict[str, Any]:
     model = get_peft_model(model, lora_config)
 
     def build_dataset(source_rows: list[dict[str, Any]]) -> Any:
-        texts = [_to_text(tokenizer, row["messages"]) for row in source_rows]
-        dataset = Dataset.from_dict({"text": texts})
+        dataset = Dataset.from_list(source_rows)
 
-        def tokenize(batch: dict[str, list[str]]) -> dict[str, Any]:
-            encoded = tokenizer(
-                batch["text"],
-                truncation=True,
-                max_length=cfg.max_seq_length,
-                padding="max_length",
-            )
-            encoded["labels"] = [list(ids) for ids in encoded["input_ids"]]
-            return encoded
+        def tokenize(row: dict[str, Any]) -> dict[str, Any]:
+            def token_ids(value: Any) -> list[int]:
+                if hasattr(value, "input_ids"):
+                    value = value.input_ids
+                elif isinstance(value, dict):
+                    value = value["input_ids"]
+                if value and isinstance(value[0], list):
+                    value = value[0]
+                return [int(token) for token in value]
 
-        return dataset.map(tokenize, batched=True, remove_columns=["text"])
+            messages = row["messages"]
+            prompt_messages = messages[:-1]
+            if hasattr(tokenizer, "apply_chat_template"):
+                full_ids = token_ids(tokenizer.apply_chat_template(
+                    messages, tokenize=True, add_generation_prompt=False
+                ))
+                prompt_ids = token_ids(tokenizer.apply_chat_template(
+                    prompt_messages, tokenize=True, add_generation_prompt=True
+                ))
+            else:
+                full_ids = token_ids(tokenizer(_to_text(tokenizer, messages), add_special_tokens=True))
+                prompt_ids = token_ids(tokenizer(
+                    _to_text(tokenizer, prompt_messages) + "\nassistant: ",
+                    add_special_tokens=True,
+                ))
+
+            completion_ids = list(full_ids[len(prompt_ids) :])
+            if not completion_ids:
+                completion_ids = tokenizer(
+                    messages[-1]["content"],
+                    add_special_tokens=False,
+                )["input_ids"]
+                if tokenizer.eos_token_id is not None:
+                    completion_ids.append(tokenizer.eos_token_id)
+            completion_ids = completion_ids[-cfg.max_seq_length :]
+            prompt_budget = max(cfg.max_seq_length - len(completion_ids), 0)
+            kept_prompt_ids = list(prompt_ids[-prompt_budget:]) if prompt_budget else []
+            input_ids = kept_prompt_ids + completion_ids
+            labels = ([-100] * len(kept_prompt_ids)) + completion_ids
+            padding = cfg.max_seq_length - len(input_ids)
+            input_ids += [tokenizer.pad_token_id] * padding
+            labels += [-100] * padding
+            attention_mask = ([1] * (cfg.max_seq_length - padding)) + ([0] * padding)
+            return {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}
+
+        return dataset.map(tokenize, remove_columns=dataset.column_names)
 
     train_dataset = build_dataset(train_rows)
     eval_dataset = build_dataset(val_rows) if val_rows else None
@@ -143,12 +180,18 @@ def train_local_lora(config_path: str | Path) -> dict[str, Any]:
         remove_unused_columns=False,
     )
 
+    trainer_kwargs = {
+        "model": model,
+        "args": training_args,
+        "train_dataset": train_dataset,
+        "eval_dataset": eval_dataset,
+    }
+    if "processing_class" in inspect.signature(Trainer.__init__).parameters:
+        trainer_kwargs["processing_class"] = tokenizer
+    else:
+        trainer_kwargs["tokenizer"] = tokenizer
     trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        tokenizer=tokenizer,
+        **trainer_kwargs,
     )
 
     model.to(_device(torch))
@@ -168,4 +211,85 @@ def train_local_lora(config_path: str | Path) -> dict[str, Any]:
     }
     Path(cfg.output_dir).mkdir(parents=True, exist_ok=True)
     Path(cfg.output_dir, "training_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    return summary
+
+
+def evaluate_local_lora(config_path: str | Path, *, split: str = "test") -> dict[str, Any]:
+    """Generate labels for a held-out split and report exact classification metrics."""
+    cfg = LocalLoraTrainingConfig.from_json(config_path)
+    torch, _, _, _, transformer_stack = _require_training_stack()
+    AutoModelForCausalLM, AutoTokenizer, _, _ = transformer_stack
+    from peft import PeftModel
+
+    rows = [
+        row for row in _load_jsonl(cfg.dataset_path)
+        if row.get("metadata", {}).get("split", row.get("split", "train")) == split
+    ]
+    tokenizer = AutoTokenizer.from_pretrained(cfg.output_dir, use_fast=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
+    tokenizer.truncation_side = "left"
+    base = AutoModelForCausalLM.from_pretrained(cfg.base_model)
+    model = PeftModel.from_pretrained(base, cfg.output_dir).to(_device(torch))
+    model.eval()
+
+    labels = ("LONG", "SHORT", "FLAT")
+    correct = 0
+    invalid = 0
+    output_samples: list[dict[str, str]] = []
+    confusion = {actual: {predicted: 0 for predicted in (*labels, "INVALID")} for actual in labels}
+    device = _device(torch)
+    batch_size = max(1, cfg.evaluation_batch_size)
+    with torch.no_grad():
+        for offset in range(0, len(rows), batch_size):
+            batch = rows[offset : offset + batch_size]
+            expected_labels = [
+                json.loads(row["messages"][-1]["content"])["prediction"] for row in batch
+            ]
+            prompt_texts = [
+                tokenizer.apply_chat_template(
+                    row["messages"][:-1], tokenize=False, add_generation_prompt=True
+                )
+                for row in batch
+            ]
+            encoded = tokenizer(
+                prompt_texts,
+                padding=True,
+                truncation=True,
+                max_length=cfg.max_seq_length,
+                return_tensors="pt",
+            )
+            input_ids = encoded["input_ids"].to(device)
+            attention_mask = encoded["attention_mask"].to(device)
+            output = model.generate(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                max_new_tokens=24,
+                do_sample=False,
+                pad_token_id=tokenizer.pad_token_id,
+            )
+            generated_batch = tokenizer.batch_decode(
+                output[:, input_ids.shape[1] :], skip_special_tokens=True
+            )
+            for expected, generated in zip(expected_labels, generated_batch, strict=True):
+                if len(output_samples) < 5:
+                    output_samples.append({"expected": expected, "generated": generated})
+                match = re.search(r'"PREDICTION"\s*:\s*"(LONG|SHORT|FLAT)"', generated.upper())
+                predicted = match.group(1) if match else "INVALID"
+                confusion[expected][predicted] += 1
+                correct += int(predicted == expected)
+                invalid += int(predicted == "INVALID")
+
+    summary = {
+        "split": split,
+        "examples": len(rows),
+        "accuracy": round(correct / len(rows), 4) if rows else None,
+        "invalid_outputs": invalid,
+        "output_samples": output_samples,
+        "confusion_matrix": confusion,
+        "base_model": cfg.base_model,
+        "adapter_path": cfg.output_dir,
+    }
+    Path(cfg.output_dir, f"evaluation_{split}.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary

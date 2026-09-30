@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class SymbolStore: ObservableObject {
-    private static let fallbackSymbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "NEARUSDT", "PEPEUSDT", "XRPUSDT"]
+    private static let fallbackSymbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "NEARUSDT", "XRPUSDT"]
 
     @Published private(set) var symbols: [MarketSymbol] = []
     @Published private(set) var isLoading = false

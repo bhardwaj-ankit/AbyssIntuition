@@ -12,13 +12,15 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from liquidity_signal.universe import ACTIVE_SYMBOLS
+from liquidity_signal.ai.deployment import deployment_status
+
 from liquidity_signal.models import (
     BotBacktestResponse,
     CandleResponse,
     BotTrade,
     DemoBotConfigStatus,
     DemoBotPerformanceResponse,
-    CumulativeSignalResponse,
     DemoBotStatus,
     HistoricalTrainingBackfillBatchResponse,
     HistoricalTrainingBackfillResponse,
@@ -29,7 +31,6 @@ from liquidity_signal.models import (
     LoraTrainingExportResponse,
     MarketSymbolsResponse,
     SignalApiResponse,
-    SignalExplainResult,
     TrainingDatasetResponse,
 )
 from liquidity_signal.service.bybit_demo_bot import BybitDemoBot
@@ -39,7 +40,7 @@ from liquidity_signal.service.engine import SignalEngine
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     if "pytest" not in sys.modules:
-        engine.start_liquidation_watchlist(["BTCUSDT", "ETHUSDT", "SOLUSDT", "NEARUSDT", "PEPEUSDT", "XRPUSDT"], interval_seconds=45)
+        engine.start_liquidation_watchlist(list(ACTIVE_SYMBOLS), interval_seconds=45)
     yield
     bybit_demo_bot.close()
     engine.close()
@@ -87,6 +88,12 @@ def home() -> FileResponse:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/model/deployment-status")
+def model_deployment_status() -> dict[str, Any]:
+    """Expose model readiness; missing or malformed manifests fail closed."""
+    return deployment_status()
 
 
 @app.get("/signal", response_model=SignalApiResponse)

@@ -173,12 +173,21 @@ def _last_value(rows: List[Dict[str, Any]], key: str, default: float = 0.0) -> f
         return default
 
 
-def _open_interest_change_pct(oi_hist: List[Dict[str, Any]]) -> float:
+def _open_interest_change_pct(oi_hist: List[Dict[str, Any]], lookback: int = 1) -> float:
+    """Percent change in open-interest notional over the last ``lookback`` steps.
+
+    ``lookback`` counts 5-minute buckets, so ``lookback=1`` is the most recent
+    5-minute delta and ``lookback=6`` is roughly the last 30 minutes.  Using a
+    small window rather than only the last two points makes the signal less
+    sensitive to single-bucket noise; callers that need the raw 5-minute delta
+    can keep the default.
+    """
     if len(oi_hist) < 2:
         return 0.0
 
+    steps = max(1, min(lookback, len(oi_hist) - 1))
     latest = _last_value(oi_hist, "sumOpenInterestValue", default=0.0)
-    previous = _last_value(oi_hist[:-1], "sumOpenInterestValue", default=0.0)
+    previous = _last_value(oi_hist[: -steps], "sumOpenInterestValue", default=0.0)
     if previous <= 0.0:
         return 0.0
     return ((latest - previous) / previous) * 100.0
@@ -257,4 +266,6 @@ def build_liquidity_features(
         top_trader_position_ratio=_last_value(top_position_ratio_rows or [], "longShortRatio", default=1.0),
         htf_bias=max(-1.0, min(1.0, htf_bias)),
         htf_regime=htf_regime,
+        order_book_source="real" if has_order_book else "proxy",
+        trade_flow_source="real" if trades else "proxy",
     )

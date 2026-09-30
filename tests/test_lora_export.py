@@ -128,15 +128,17 @@ def test_lora_export_builds_examples_from_resolved_snapshots(tmp_path: Path) -> 
     export = engine.export_lora_training_dataset("BTCUSDT", horizon_minutes=15, limit=20)
 
     assert export.summary.total_examples == 1
-    assert export.summary.long_examples == 1
+    # The synthetic path crosses both barriers in the same one-minute candle;
+    # without tick ordering that outcome must remain FLAT, not be guessed LONG.
+    assert export.summary.flat_examples == 1
     assert export.examples[0].symbol == "BTCUSDT"
-    assert export.examples[0].label_action == Direction.LONG
+    assert export.examples[0].label_action == Direction.FLAT
     assert export.examples[0].messages[0]["role"] == "system"
     assert "signal" in export.examples[0].prompt
     assert "\"structure\"" in export.examples[0].prompt
     assert "\"session\"" in export.examples[0].prompt
     assert "\"data_quality\"" in export.examples[0].prompt
-    assert "\"prediction\":\"LONG\"" in export.examples[0].completion
+    assert "\"prediction\":\"FLAT\"" in export.examples[0].completion
 
     store.close()
 

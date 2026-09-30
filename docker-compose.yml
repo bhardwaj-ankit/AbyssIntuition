@@ -38,6 +38,48 @@ services:
     networks:
       - abyss_net
 
+  collector:
+    profiles: ["data-collection"]
+    build:
+      context: .
+    container_name: abyssintuition-liquidation-collector
+    restart: unless-stopped
+    command:
+      - liquidity-signal
+      - capture-liquidations
+      - --db-path
+      - runtime/liquidation_history.db
+      - --status-interval-seconds
+      - "30"
+    volumes:
+      - ./runtime:/app/runtime
+    stop_grace_period: 30s
+    networks:
+      - abyss_net
+
+  daily-refresh:
+    profiles: ["data-collection"]
+    build:
+      context: .
+    container_name: abyssintuition-daily-data-refresh
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          liquidity-signal daily-data-refresh --retry-days 3 --forward-lookback-hours 36 --no-run-training-when-ready
+          liquidity-signal backup-data
+          liquidity-signal data-operations-health --no-fail-on-unhealthy
+          sleep "$${DAILY_REFRESH_INTERVAL_SECONDS:-86400}"
+        done
+    environment:
+      DAILY_REFRESH_INTERVAL_SECONDS: "86400"
+    volumes:
+      - ./runtime:/app/runtime
+    networks:
+      - abyss_net
+
 volumes:
   caddy_data:
   caddy_config:

@@ -1,0 +1,18 @@
+{
+  "base_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+  "task": "crypto_direction_classification",
+  "symbol": "MULTI",
+  "horizon_minutes": 240,
+  "dataset_path": "runtime/lora_exports_v5/crypto_240m_balanced_chatml.jsonl",
+  "output_dir": "runtime/lora_runs/smollm2-135m-crypto-240m-v5",
+  "max_seq_length": 512,
+  "learning_rate": 0.00015,
+  "epochs": 1,
+  "micro_batch_size": 4,
+  "gradient_accumulation_steps": 4,
+  "lora_r": 16,
+  "lora_alpha": 32,
+  "lora_dropout": 0.05,
+  "balance_mode": "undersample_majority",
+  "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"]
+}

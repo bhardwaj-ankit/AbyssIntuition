@@ -27,6 +27,7 @@ wheels/
 # IDE
 .vscode/
 .idea/
+.claude/settings.json
 .xcuserdata/
 *.xcuserstate
 *.swp
@@ -49,6 +50,30 @@ logs/
 .env.docker
 runtime/bybit_demo_config.json
 runtime/ai_supervisor_config.json
+
+# Generated runtime artifacts (rebuilt locally; see README fresh-clone setup)
+runtime/vision_cache/
+runtime/vision_metrics.db
+runtime/*.db
+runtime/models/
+runtime/lora_runs/
+runtime/pagination_smoke/
+runtime/training_v*.db
+runtime/training_pagination_smoke.db
+runtime/*.db-shm
+runtime/*.db-wal
+runtime/*_cache/
+runtime/backups/
+runtime/*_status.json
+runtime/*_status_*.json
+runtime/data_completeness*.json
+runtime/data_operations_health.json
+runtime/watchdog_interventions.jsonl
+runtime/public_data_research/
+runtime/shared_chat_research.html
+runtime/run_*.ps1
+runtime/lora_exports_v*/
+*.joblib
 
 # Temp
 .commit_marker_*
